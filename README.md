@@ -63,7 +63,7 @@ Open the link, log in with a user from step 3, and you're ready.
 
 ## Daily use
 
-- **Guest arrives (walk-in or online):** **+ Add Car** > Arriving now > fill in the name, plate, make and model > pick days > **Check in car**. Tell them to park inside the fence and tick the box.
+- **Guest arrives (walk-in or online):** **+ Add Car** > Arriving now > start typing the name, plate or confirmation number. If they've been here before, click them in the pop-up and their car details fill in. If they have a reservation waiting, click **Open & check in**. Otherwise fill in the details > pick days > **Check in car**. Tell them to park inside the fence and tick the box.
 - **Booking for a later date:** **+ Add Car** > Future reservation > pick the date. On the day, press **Arrived** on the dashboard.
 - **Guest stays longer:** open the car > **+1 day** (or change Days paid and save).
 - **Guest leaves early:** open the car (or use the table) > **Check out now**.
@@ -71,6 +71,12 @@ Open the link, log in with a user from step 3, and you're ready.
 - **Find an old record:** **History** > search by name or plate. **Download CSV** gives a spreadsheet.
 
 Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it opens like an app.
+
+## Updates
+
+If you set up the database before an update was released, run the matching file once in the Supabase SQL Editor:
+
+- `supabase/update-2-confirmation-number.sql`: adds the Confirmation # field and faster customer look-up.
 
 ## Changing the lot size
 
