@@ -136,3 +136,6 @@ begin
   end if;
 end;
 $$;
+
+-- 6. Tell Supabase's API to pick up any new columns right away.
+notify pgrst, 'reload schema';

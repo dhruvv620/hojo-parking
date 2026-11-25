@@ -4,3 +4,6 @@
 alter table public.parking_records add column if not exists confirmation_number text;
 create index if not exists parking_records_name_idx on public.parking_records (lower(guest_name));
 create index if not exists parking_records_conf_idx on public.parking_records (confirmation_number);
+
+-- Tell Supabase's API to pick up the new column right away.
+notify pgrst, 'reload schema';
