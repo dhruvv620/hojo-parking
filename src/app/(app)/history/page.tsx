@@ -178,10 +178,10 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
   return (
     <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       className="group flex items-center gap-2.5 rounded-lg py-1 text-sm font-medium text-slate-600 outline-none focus-visible:ring-4 focus-visible:ring-brand-200">
-      <span className={`relative h-6 w-10 rounded-full transition-colors duration-200 ${checked ? "bg-brand-600" : "bg-slate-200 group-hover:bg-slate-300"}`}>
-        <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-200 ease-out ${checked ? "translate-x-[18px]" : "translate-x-0.5"}`} />
+      <span className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 ${checked ? "bg-brand-600" : "bg-slate-200 group-hover:bg-slate-300"}`}>
+        <span className={`h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgb(16_24_40/0.25)] transition-transform duration-200 ease-out ${checked ? "translate-x-5" : "translate-x-0"}`} />
       </span>
-      {label}
+      <span className="whitespace-nowrap">{label}</span>
     </button>
   );
 }
