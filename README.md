@@ -65,7 +65,7 @@ Open the link, log in with a user from step 3, and you're ready.
 
 - **Guest arrives (walk-in or online):** **+ Add Car** > Arriving now > start typing the name, plate or confirmation number. If they've been here before, click them in the pop-up and their car details fill in. If they have a reservation waiting, click **Open & check in**. Otherwise fill in the details > pick days > **Check in car**. Tell them to park inside the fence and tick the box.
 - **Booking for a later date:** **+ Add Car** > Future reservation > pick the date. On the day, press **Arrived** on the dashboard.
-- **Guest stays longer:** open the car > **+1 day** (or change Days paid and save).
+- **Guest extends (or shortens) their stay:** open the car (or use **⋯** on the dashboard) > **Update stay**. Pick the new check-out date, choose **Paid / Not paid yet / No charge**, add the amount and a note. It all shows in the car's **Stay history**, with who made the change and when. Unpaid changes show an amber badge until someone presses **Mark paid**.
 - **Guest leaves early:** open the car (or use the table) > **Check out now**.
 - **Space opens up for a car parked outside:** press **Move inside** in the table.
 - **Find an old record:** **History** > search by name or plate. **Download CSV** gives a spreadsheet.
@@ -77,6 +77,7 @@ Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it open
 If you set up the database before an update was released, run the matching file once in the Supabase SQL Editor:
 
 - `supabase/update-2-confirmation-number.sql`: adds the Confirmation # field and faster customer look-up.
+- `supabase/update-3-stay-history.sql`: adds **Update stay** and the **Stay history** log (extensions, payments, notes).
 
 ## Changing the lot size
 

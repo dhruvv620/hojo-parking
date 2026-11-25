@@ -107,7 +107,7 @@ export function DatePicker({ value, onChange, mode = "datetime", minDate, render
       {open && (
         <Portal>
           <div ref={panelRef} role="dialog" aria-label="Choose a date" style={style}
-            onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); btnRef.current?.focus(); } }}
+            onKeyDown={(e) => { if (e.key === "Escape") { e.stopPropagation(); setOpen(false); btnRef.current?.focus(); } }}
             className="menu-panel w-[19.5rem] !p-3">
             {/* month header */}
             <div className="mb-2 flex items-center justify-between">

@@ -4,14 +4,15 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRightLeft, CalendarClock, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
-  Pencil, Plus, Search, SquareParking, TimerReset, TriangleAlert, Undo2, X,
+  ArrowRightLeft, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
+  Pencil, Plus, Search, SquareParking, TriangleAlert, Undo2, X,
 } from "lucide-react";
 import { useParking } from "@/lib/useParking";
 import { LOT_CAPACITY } from "@/lib/config";
 import { carLabel, type ParkingRecord } from "@/lib/types";
 import { DAY, fmtDateTime, fmtDay, fmtDuration, fmtTime, sameDay, startOfDay } from "@/lib/time";
-import { checkOutNow, extend, markArrived, moveTo } from "@/lib/actions";
+import { checkOutNow, markArrived, moveTo } from "@/lib/actions";
+import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { useRun } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu } from "@/components/ui/Dropdown";
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const p = useParking();
   const runAction = useRun();
   const confirm = useConfirm();
+  const [stay, setStay] = useState<{ r: ParkingRecord; add: number } | null>(null);
   // refresh right away after any button, without waiting for the live update
   const run: typeof runAction = async (action, msg) => {
     const ok = await runAction(action, msg);
@@ -73,7 +75,7 @@ export default function Dashboard() {
           <LotGrid inside={p.inside} now={p.now} />
           <ParkedTable parked={p.parked} now={p.now} lotFull={p.isFull}
             onCheckOut={checkOut}
-            onExtend={(r) => run(extend(r, 1), `${r.guest_name} extended by 1 day.`)}
+            onUpdateStay={(r) => setStay({ r, add: 0 })}
             onMove={(r, loc) => run(moveTo(r, loc), loc === "inside" ? "Moved inside the fence." : "Moved outside the fence.")}
           />
         </div>
@@ -82,10 +84,11 @@ export default function Dashboard() {
           <UpcomingPanel upcoming={p.upcoming} parked={p.parked} now={p.now}
             onArrived={(r) => run(markArrived(r, p.isFull), `${r.guest_name} checked in.`)} />
           <LeavingToday cars={p.leavingToday} now={p.now} />
-          <RecentlyLeft cars={p.recentlyLeft}
-            onExtend={(r) => run(extend(r, 1), `${r.guest_name} is back in the lot (+1 day).`)} />
+          <RecentlyLeft cars={p.recentlyLeft} onExtend={(r) => setStay({ r, add: 1 })} />
         </aside>
       </div>
+
+      <UpdateStayDialog record={stay?.r ?? null} presetAdd={stay?.add ?? 0} onClose={() => setStay(null)} onSaved={p.reload} />
     </div>
   );
 }
@@ -230,12 +233,12 @@ function Legend({ className, text }: { className: string; text: string }) {
 
 /* ------------------------------------------------------------------ */
 
-function ParkedTable({ parked, now, lotFull, onCheckOut, onExtend, onMove }: {
+function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }: {
   parked: ParkingRecord[];
   now: number;
   lotFull: boolean;
   onCheckOut: (r: ParkingRecord) => void;
-  onExtend: (r: ParkingRecord) => void;
+  onUpdateStay: (r: ParkingRecord) => void;
   onMove: (r: ParkingRecord, loc: "inside" | "outside") => void;
 }) {
   const router = useRouter();
@@ -336,7 +339,7 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onExtend, onMove }: {
                         </button>
                         <Menu items={[
                           { label: "Edit details", icon: <Pencil />, onSelect: () => router.push(`/cars/${r.id}`) },
-                          { label: "Add 1 day", icon: <TimerReset />, onSelect: () => onExtend(r) },
+                          { label: "Update stay / extend", icon: <CalendarRange />, onSelect: () => onUpdateStay(r) },
                           { label: "Move inside fence", icon: <ArrowRightLeft />, onSelect: () => onMove(r, "inside"), hidden: r.location === "inside" || lotFull },
                           { label: "Move outside fence", icon: <ArrowRightLeft />, onSelect: () => onMove(r, "outside"), hidden: r.location === "outside" },
                           { label: "Check out now", icon: <LogOut />, onSelect: () => onCheckOut(r), danger: true, divider: true },

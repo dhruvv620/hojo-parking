@@ -2,7 +2,7 @@
 
 import { useId, useRef, useState } from "react";
 import {
-  ArrowRightLeft, BedDouble, ChevronDown, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
+  ArrowRightLeft, BedDouble, CalendarRange, ChevronDown, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
   Hash, Info, LoaderCircle, LogIn, MapPin, Minus, Phone, Plus, RectangleHorizontal, Sparkles, SquareParking,
   TriangleAlert, UserRound, X,
 } from "lucide-react";
@@ -20,9 +20,11 @@ type Props = {
   /** How many cars are inside the fence right now. */
   insideCount: number;
   onSaved: (r: ParkingRecord, note?: string) => void;
+  /** Edit mode: opens the Update stay pop-up instead of editing days here. */
+  onUpdateStay?: () => void;
 };
 
-export function CarForm({ record, insideCount, onSaved }: Props) {
+export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
   const isNew = !record;
   const wasInside =
     !!record && record.status === "parked" && record.location === "inside" &&
@@ -176,6 +178,8 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
                 onChange={(d) => set(isFuture ? "futureArrival" : "arrival", toLocalInput(d))} />
             )}
           </div>
+          {isNew || !onUpdateStay ? (
+            <>
           <div className="order-3 sm:order-2">
             <label className="label">Leaves by</label>
             <DatePicker mode="date" ariaLabel="Leaves by" value={checkout}
@@ -223,6 +227,28 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
               </div>
             </div>
           </div>
+            </>
+          ) : (
+            <>
+          <div className="order-3 sm:order-2">
+            <label className="label">Leaves by</label>
+            <div className="flex h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3.5 font-semibold text-emerald-800">
+              <CalendarCheck className="h-4 w-4 shrink-0" />
+              <span className="flex-1 truncate">{fmtDateTime(checkout)}</span>
+              <span className="text-xs font-medium text-emerald-700">{days} day{days > 1 ? "s" : ""}</span>
+            </div>
+          </div>
+          <div className="order-2 flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50/60 px-4 py-3 sm:order-3 sm:col-span-2">
+            <CalendarRange className="h-5 w-5 shrink-0 text-slate-400" />
+            <p className="min-w-0 flex-1 text-sm text-slate-600">
+              To <b>extend or shorten</b> the stay, use <b>Update stay</b>. It records payment and a note in the Stay history.
+            </p>
+            <button type="button" className="btn-primary btn-sm" onClick={onUpdateStay}>
+              <CalendarRange /> Update stay
+            </button>
+          </div>
+            </>
+          )}
         </div>
 
         {isFuture && (

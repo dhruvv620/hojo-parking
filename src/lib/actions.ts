@@ -1,14 +1,20 @@
 "use client";
 
 import { supabaseBrowser } from "./supabase/client";
-import { isLotFullError, type Location, type ParkingRecord } from "./types";
+import { isLotFullError, type Location, type ParkingRecord, type Payment } from "./types";
 import { DAY } from "./time";
 
 type Result = { ok: true; note?: string } | { ok: false; error: string };
 
 const table = () => supabaseBrowser().from("parking_records");
 
-async function update(id: string, patch: Partial<ParkingRecord>): Promise<Result> {
+type Patch = Partial<ParkingRecord> & {
+  change_note?: string | null;
+  change_payment?: Payment | null;
+  change_amount?: number | null;
+};
+
+async function update(id: string, patch: Patch): Promise<Result> {
   const { error } = await table().update(patch).eq("id", id);
   return error ? { ok: false, error: error.message } : { ok: true };
 }
@@ -17,7 +23,7 @@ async function update(id: string, patch: Partial<ParkingRecord>): Promise<Result
  * Save something that may need an inside spot. If the lot filled up in the
  * meantime, save it as "outside fence" instead and say so.
  */
-async function updateWithFallback(id: string, patch: Partial<ParkingRecord>): Promise<Result> {
+async function updateWithFallback(id: string, patch: Patch): Promise<Result> {
   const first = await update(id, patch);
   if (first.ok || !isLotFullError(first.error) || patch.location === "outside") return first;
   const second = await update(id, { ...patch, location: "outside" });
@@ -61,5 +67,32 @@ export function restoreReservation(r: ParkingRecord) {
 
 export async function deleteRecord(r: ParkingRecord): Promise<Result> {
   const { error } = await table().delete().eq("id", r.id);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/**
+ * Change how many days a car stays (extend or shorten), and record why in the
+ * Stay history: payment status, amount and a note.
+ */
+export function updateStay(
+  r: ParkingRecord,
+  change: { days: number; payment: Payment | null; amount: number | null; note: string },
+) {
+  const reopen = r.status === "checked_out" || (r.status === "parked" && new Date(r.checkout_at).getTime() <= Date.now());
+  return updateWithFallback(r.id, {
+    days: change.days,
+    ...(reopen ? { status: "parked" as const } : {}),
+    change_note: change.note.trim() || null,
+    change_payment: change.payment,
+    change_amount: change.amount,
+  });
+}
+
+/** Mark a logged unpaid change as paid. */
+export async function markChangePaid(changeId: string): Promise<Result> {
+  const { error } = await supabaseBrowser()
+    .from("stay_changes")
+    .update({ payment: "paid", paid_marked_at: new Date().toISOString() })
+    .eq("id", changeId);
   return error ? { ok: false, error: error.message } : { ok: true };
 }

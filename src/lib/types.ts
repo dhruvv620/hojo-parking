@@ -55,3 +55,31 @@ export function carLabel(r: Pick<ParkingRecord, "color" | "make" | "model">) {
 export function isLotFullError(message: string | undefined) {
   return !!message && message.includes("LOT_FULL");
 }
+
+export type Payment = "paid" | "unpaid" | "free";
+
+export type StayChangeKind =
+  | "created" | "reserved" | "arrived" | "extended" | "shortened" | "dates_changed" | "checked_out"
+  | "reopened" | "cancelled" | "restored" | "moved" | "edited" | "note";
+
+/** One row of a customer's Stay history. */
+export interface StayChange {
+  id: string;
+  record_id: string;
+  changed_at: string;
+  changed_by_email: string | null;
+  kind: StayChangeKind;
+  old_arrival_at: string | null;
+  old_days: number | null;
+  old_checkout_at: string | null;
+  new_arrival_at: string | null;
+  new_days: number | null;
+  new_checkout_at: string | null;
+  old_location: string | null;
+  new_location: string | null;
+  details: string | null;
+  payment: Payment | null;
+  amount: number | null;
+  note: string | null;
+  paid_marked_at: string | null;
+}

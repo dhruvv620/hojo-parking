@@ -12,8 +12,10 @@ import { fmtDateTime, fmtDuration } from "@/lib/time";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu } from "@/components/ui/Dropdown";
 import { Avatar, EmptyState, Plate } from "@/components/ui/bits";
-import { ArrowLeft, CalendarX2, Clock, Ellipsis, LogIn, LogOut, Plus, SearchX, Trash2, Undo2 } from "lucide-react";
-import { cancelReservation, checkOutNow, deleteRecord, extend, markArrived, restoreReservation } from "@/lib/actions";
+import { StayHistory } from "@/components/StayHistory";
+import { UpdateStayDialog } from "@/components/UpdateStayDialog";
+import { ArrowLeft, CalendarRange, CalendarX2, Clock, Ellipsis, LogIn, LogOut, SearchX, Trash2, Undo2 } from "lucide-react";
+import { cancelReservation, checkOutNow, deleteRecord, markArrived, restoreReservation } from "@/lib/actions";
 
 const STATUS: Record<LiveStatus, { text: string; cls: string; dot: string }> = {
   upcoming: { text: "Upcoming reservation", cls: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
@@ -41,6 +43,8 @@ export default function EditCarPage() {
   const [record, setRecord] = useState<ParkingRecord | null>(null);
   const [missing, setMissing] = useState(false);
   const [formKey, setFormKey] = useState(0);
+  const [stayDialog, setStayDialog] = useState<number | null>(null); // days to pre-add, or null when closed
+  const [unpaid, setUnpaid] = useState(0);
 
   const load = useCallback(async () => {
     const { data } = await supabaseBrowser().from("parking_records").select("*").eq("id", id).maybeSingle();
@@ -108,6 +112,11 @@ export default function EditCarPage() {
               <Plate plate={record.license_plate} state={record.plate_state} />
               <span>{carLabel(record)}</span>
               {record.confirmation_number && <span className="font-mono text-xs">#{record.confirmation_number}</span>}
+              {unpaid > 0 && (
+                <span className="chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">
+                  <Clock className="h-3 w-3" /> {unpaid} unpaid change{unpaid > 1 ? "s" : ""}
+                </span>
+              )}
             </div>
           </div>
           <Menu label="More" triggerClassName="btn-secondary btn-icon" items={[
@@ -123,6 +132,7 @@ export default function EditCarPage() {
             <>
               <span className="mr-auto text-sm text-slate-600">Expected {fmtDateTime(record.arrival_at)}</span>
               <button className="btn-secondary" onClick={cancel}><CalendarX2 /> Cancel reservation</button>
+              <button className="btn-secondary" onClick={() => setStayDialog(0)}><CalendarRange /> Update stay</button>
               <button className="btn-primary" onClick={() => act(markArrived(record, lot.isFull), "Checked in. Paid days start now.")}>
                 <LogIn /> Guest arrived
               </button>
@@ -134,9 +144,8 @@ export default function EditCarPage() {
                 <Clock className="h-4 w-4 text-slate-400" /> Leaves {fmtDateTime(record.checkout_at)}
                 <span className="text-slate-400">· in {fmtDuration(new Date(record.checkout_at).getTime() - lot.now)}</span>
               </span>
-              <button className="btn-secondary" onClick={() => act(extend(record, 1), "Extended by 1 day.")}><Plus /> 1 day</button>
-              <button className="btn-secondary" onClick={() => act(extend(record, 2), "Extended by 2 days.")}><Plus /> 2 days</button>
-              <button className="btn-primary" onClick={checkout}><LogOut /> Check out now</button>
+              <button className="btn-secondary" onClick={checkout}><LogOut /> Check out now</button>
+              <button className="btn-primary" onClick={() => setStayDialog(0)}><CalendarRange /> Update stay</button>
             </>
           )}
           {(s === "auto_out" || s === "checked_out") && (
@@ -144,8 +153,8 @@ export default function EditCarPage() {
               <span className="mr-auto text-sm text-slate-600">
                 Left {fmtDateTime(s === "auto_out" ? record.checkout_at : record.checked_out_at)}. Car still here?
               </span>
-              <button className="btn-primary" onClick={() => act(extend(record, 1), "Extended. Car is back in the lot.")}>
-                <Undo2 /> Extend 1 day
+              <button className="btn-primary" onClick={() => setStayDialog(1)}>
+                <Undo2 /> Extend stay
               </button>
             </>
           )}
@@ -160,14 +169,19 @@ export default function EditCarPage() {
         </div>
       </div>
 
-      <div className="mt-5">
-      <CarForm key={formKey} record={record} insideCount={lot.inside.length}
+      <div className="mt-5 space-y-5">
+      <StayHistory recordId={record.id} refreshKey={formKey} onUnpaidCount={setUnpaid} />
+
+      <CarForm key={formKey} record={record} insideCount={lot.inside.length} onUpdateStay={() => setStayDialog(0)}
         onSaved={(r, note) => {
           toast(note ?? "Changes saved.", note ? "warn" : "ok");
           setRecord(r);
           setFormKey((k) => k + 1);
         }} />
       </div>
+
+      <UpdateStayDialog record={stayDialog === null ? null : record} presetAdd={stayDialog ?? 0}
+        onClose={() => setStayDialog(null)} onSaved={load} />
 
       <p className="mt-6 text-center text-xs text-slate-400">
         Added {fmtDateTime(record.created_at)} · Last changed {fmtDateTime(record.updated_at)}

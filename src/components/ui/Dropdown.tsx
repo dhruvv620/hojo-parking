@@ -31,7 +31,7 @@ export function useFloatingPosition(open: boolean, trigger: React.RefObject<HTML
       top: openUp ? r.top - height - gap : r.bottom + gap,
       left,
       width: matchWidth ? r.width : undefined,
-      zIndex: 60,
+      zIndex: 90,
       transformOrigin: openUp ? "bottom" : "top",
     });
   }, [trigger, align, matchWidth]);
