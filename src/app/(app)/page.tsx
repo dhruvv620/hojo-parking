@@ -171,7 +171,7 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onMove }: {
       .filter((r) => tab === "all" || r.location === tab)
       .filter((r) =>
         !s ||
-        [r.guest_name, r.license_plate, r.make, r.model, r.color, r.room_number, r.phone]
+        [r.guest_name, r.license_plate, r.confirmation_number, r.make, r.model, r.color, r.room_number, r.phone]
           .some((v) => v?.toLowerCase().includes(s)),
       )
       .sort((a, b) => a.checkout_at.localeCompare(b.checkout_at));
@@ -191,7 +191,7 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onMove }: {
             </button>
           ))}
         </div>
-        <input className="input ml-auto max-w-xs py-2 text-sm" placeholder="Search name, plate, car, room..."
+        <input className="input ml-auto max-w-xs py-2 text-sm" placeholder="Search name, plate, conf #, room..."
           value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
@@ -318,7 +318,7 @@ function UpcomingPanel({ upcoming, parked, now, onArrived }: {
                       <Link href={`/cars/${r.id}`} className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold">{r.guest_name}</div>
                         <div className="truncate text-xs text-slate-500">
-                          {r.license_plate} · {r.days}d · {late ? <span className="text-amber-600">expected {fmtTime(r.arrival_at)}</span> : fmtTime(r.arrival_at)}
+                          {r.confirmation_number && `#${r.confirmation_number} · `}{r.license_plate} · {r.days}d · {late ? <span className="text-amber-600">expected {fmtTime(r.arrival_at)}</span> : fmtTime(r.arrival_at)}
                         </div>
                       </Link>
                       {day === today && (

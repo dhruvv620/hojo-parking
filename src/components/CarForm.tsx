@@ -5,6 +5,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
 import { addDays, fmtDateTime, fromLocalInput, toLocalInput } from "@/lib/time";
+import { CustomerSuggest, type Customer } from "./CustomerSuggest";
 
 type Props = {
   /** The record being edited. Leave out to add a new car. */
@@ -25,6 +26,7 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
   const [mode, setMode] = useState<"now" | "future">(record?.status === "reserved" ? "future" : "now");
   const [f, setF] = useState({
     guest_name: record?.guest_name ?? "",
+    confirmation_number: record?.confirmation_number ?? "",
     phone: record?.phone ?? "",
     room_number: record?.room_number ?? "",
     source: (record?.source ?? "walk_in") as Source,
@@ -43,8 +45,36 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullRetry, setFullRetry] = useState(false);
+  // which field the look-up drop-down is showing under (Add Car only)
+  const [lookup, setLookup] = useState<null | "guest_name" | "license_plate" | "confirmation_number">(null);
+  const [picked, setPicked] = useState<string | null>(null);
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
+
+  function pickCustomer(c: Customer) {
+    setF((s) => ({
+      ...s,
+      guest_name: c.guest_name,
+      phone: c.phone ?? s.phone,
+      license_plate: c.license_plate,
+      plate_state: c.plate_state ?? "",
+      make: c.make ?? "",
+      model: c.model ?? "",
+      color: c.color ?? "",
+    }));
+    setPicked(`${c.guest_name} (${c.license_plate})`);
+    setLookup(null);
+  }
+
+  /** Props that turn a field into a look-up box on the Add Car form. */
+  const lookupProps = (k: "guest_name" | "license_plate" | "confirmation_number") =>
+    isNew
+      ? {
+          onFocus: () => setLookup(k),
+          onBlur: () => setTimeout(() => setLookup((cur) => (cur === k ? null : cur)), 150),
+          suggest: lookup === k ? <CustomerSuggest query={f[k]} onPick={pickCustomer} /> : null,
+        }
+      : {};
 
   const isFuture = isNew ? mode === "future" : record.status === "reserved";
   const arrivalIso = isFuture
@@ -66,6 +96,7 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
     const location: Location = forceOutside ? "outside" : loc;
     const payload = {
       guest_name: f.guest_name.trim(),
+      confirmation_number: f.confirmation_number.trim() || null,
       phone: f.phone.trim() || null,
       room_number: f.room_number.trim() || null,
       source: f.source,
@@ -163,9 +194,21 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
 
       {/* Guest + car */}
       <section className="card p-5">
-        <h2 className="mb-4 text-lg font-bold">Guest and car</h2>
+        <h2 className="text-lg font-bold">Guest and car</h2>
+        <p className="mb-4 text-sm text-slate-500">
+          {isNew
+            ? "Start typing a name, plate or confirmation number. Returning customers and waiting reservations will pop up."
+            : "Edit any detail and press Save changes."}
+        </p>
+        {picked && (
+          <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+            <span className="flex-1">Filled in from <b>{picked}</b>&apos;s last visit. Check the details are still right.</span>
+            <button type="button" className="font-semibold underline" onClick={() => setPicked(null)}>OK</button>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Guest name *" value={f.guest_name} onChange={(v) => set("guest_name", v)} autoFocus={isNew} required />
+          <Field label="Guest name *" value={f.guest_name} onChange={(v) => set("guest_name", v)} autoFocus={isNew} required
+            {...lookupProps("guest_name")} />
           <div>
             <label className="label">Booked</label>
             <div className="grid grid-cols-2 gap-2">
@@ -178,7 +221,8 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
             </div>
           </div>
           <div className="grid grid-cols-[1fr_90px] gap-2">
-            <Field label="Plate number *" value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} required mono />
+            <Field label="Plate number *" value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} required mono
+              {...lookupProps("license_plate")} />
             <Field label="State" value={f.plate_state} onChange={(v) => set("plate_state", v.toUpperCase())} placeholder="NJ" />
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -186,8 +230,12 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
             <Field label="Model" value={f.model} onChange={(v) => set("model", v)} placeholder="Camry" />
             <Field label="Color" value={f.color} onChange={(v) => set("color", v)} placeholder="Gray" />
           </div>
-          <Field label="Phone" value={f.phone} onChange={(v) => set("phone", v)} type="tel" />
-          <Field label="Room #" value={f.room_number} onChange={(v) => set("room_number", v)} />
+          <Field label="Confirmation #" value={f.confirmation_number} onChange={(v) => set("confirmation_number", v)}
+            placeholder="From the online booking" mono {...lookupProps("confirmation_number")} />
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Phone" value={f.phone} onChange={(v) => set("phone", v)} type="tel" />
+            <Field label="Room #" value={f.room_number} onChange={(v) => set("room_number", v)} />
+          </div>
           <div className="sm:col-span-2">
             <label className="label">Notes</label>
             <textarea className="input min-h-20" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
@@ -270,15 +318,18 @@ function ModeButton({ active, onClick, title, sub }: { active: boolean; onClick:
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required, autoFocus, mono }: {
+function Field({ label, value, onChange, type = "text", placeholder, required, autoFocus, mono, onFocus, onBlur, suggest }: {
   label: string; value: string; onChange: (v: string) => void; type?: string;
   placeholder?: string; required?: boolean; autoFocus?: boolean; mono?: boolean;
+  onFocus?: () => void; onBlur?: () => void; suggest?: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="relative">
       <label className="label">{label}</label>
-      <input type={type} className={`input ${mono ? "font-mono uppercase" : ""}`} value={value} placeholder={placeholder}
-        required={required} autoFocus={autoFocus} onChange={(e) => onChange(e.target.value)} />
+      <input type={type} className={`input ${mono ? "font-mono uppercase placeholder:normal-case placeholder:font-sans" : ""}`} value={value}
+        placeholder={placeholder} required={required} autoFocus={autoFocus} autoComplete="off"
+        onFocus={onFocus} onBlur={onBlur} onChange={(e) => onChange(e.target.value)} />
+      {suggest}
     </div>
   );
 }

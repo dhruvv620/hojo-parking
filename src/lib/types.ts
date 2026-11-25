@@ -5,6 +5,7 @@ export type Status = "reserved" | "parked" | "checked_out" | "cancelled";
 export interface ParkingRecord {
   id: string;
   guest_name: string;
+  confirmation_number: string | null;
   phone: string | null;
   room_number: string | null;
   source: Source;

@@ -33,7 +33,7 @@ export default function HistoryPage() {
     if (term) {
       const like = `"%${term}%"`;
       filters.push(
-        `or(${["guest_name", "license_plate", "make", "model", "color", "room_number", "phone"].map((c) => `${c}.ilike.${like}`).join(",")})`,
+        `or(${["guest_name", "license_plate", "confirmation_number", "make", "model", "color", "room_number", "phone"].map((c) => `${c}.ilike.${like}`).join(",")})`,
       );
     }
     if (filters.length) query = query.or(`and(${filters.join(",")})`);
@@ -49,10 +49,10 @@ export default function HistoryPage() {
   }, [load]);
 
   function exportCsv() {
-    const head = ["Guest", "Phone", "Room", "Booked", "Plate", "State", "Make", "Model", "Color", "Where", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
+    const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Plate", "State", "Make", "Model", "Color", "Where", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
     const now = Date.now();
     const lines = rows.map((r) => [
-      r.guest_name, r.phone, r.room_number, r.source === "online" ? "Online" : "Walk-in", r.license_plate, r.plate_state,
+      r.guest_name, r.confirmation_number, r.phone, r.room_number, r.source === "online" ? "Online" : "Walk-in", r.license_plate, r.plate_state,
       r.make, r.model, r.color, r.location, liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
       fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.notes,
     ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
@@ -77,7 +77,7 @@ export default function HistoryPage() {
       </div>
 
       <div className="card flex flex-wrap items-center gap-3 p-4">
-        <input className="input max-w-sm py-2 text-sm" placeholder="Search name, plate, car, room, phone..."
+        <input className="input max-w-sm py-2 text-sm" placeholder="Search name, plate, conf #, car, room..."
           value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="input w-auto py-2 text-sm" value={range} onChange={(e) => setRange(Number(e.target.value))}>
           {RANGES.map((r) => <option key={r.days} value={r.days}>{r.label}</option>)}

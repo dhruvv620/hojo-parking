@@ -45,9 +45,14 @@ create table if not exists public.parking_records (
   updated_by     uuid default auth.uid()
 );
 
+-- Added later: confirmation number from online bookings.
+alter table public.parking_records add column if not exists confirmation_number text;
+
 create index if not exists parking_records_status_idx   on public.parking_records (status, checkout_at);
 create index if not exists parking_records_arrival_idx  on public.parking_records (arrival_at);
 create index if not exists parking_records_plate_idx    on public.parking_records (license_plate);
+create index if not exists parking_records_name_idx     on public.parking_records (lower(guest_name));
+create index if not exists parking_records_conf_idx     on public.parking_records (confirmation_number);
 
 -- 3. Before every save: clean up the plate, work out the check-out time,
 --    and refuse to put a 68th car inside the fence.
