@@ -2,11 +2,12 @@
 
 import { useId, useRef, useState } from "react";
 import {
-  ArrowRightLeft, BedDouble, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
+  ArrowRightLeft, BedDouble, ChevronDown, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
   Hash, Info, LoaderCircle, LogIn, MapPin, Minus, Phone, Plus, RectangleHorizontal, Sparkles, SquareParking,
   TriangleAlert, UserRound, X,
 } from "lucide-react";
 import { SectionTitle } from "./ui/bits";
+import { DatePicker } from "./ui/DatePicker";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
@@ -169,17 +170,32 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
             {isNew && !isFuture ? (
               <div className="input-readonly gap-2"><Clock className="h-4 w-4 text-slate-400" /> Now, {fmtTime(new Date())}</div>
             ) : (
-              <input type="datetime-local" className="input" required
-                value={isFuture ? f.futureArrival : f.arrival}
-                onChange={(e) => set(isFuture ? "futureArrival" : "arrival", e.target.value)} />
+              <DatePicker ariaLabel={isFuture ? "Expected arrival" : "Arrived"}
+                value={new Date(isFuture ? f.futureArrival : f.arrival)}
+                minDate={isFuture ? new Date() : undefined}
+                onChange={(d) => set(isFuture ? "futureArrival" : "arrival", toLocalInput(d))} />
             )}
           </div>
           <div className="order-3 sm:order-2">
             <label className="label">Leaves by</label>
-            <div className="flex h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3.5 font-semibold text-emerald-800">
-              <CalendarCheck className="h-4 w-4" /> {fmtDateTime(checkout)}
-            </div>
-            <p className="mt-1.5 text-xs text-slate-500">{days} x 24 hours. Frees up on its own.</p>
+            <DatePicker mode="date" ariaLabel="Leaves by" value={checkout}
+              minDate={addDays(arrivalIso, 1)}
+              onChange={(d) => set("days", daysBetween(new Date(arrivalIso), d))}
+              footer={(d) => {
+                const n = daysBetween(new Date(arrivalIso), d);
+                return <><b className="text-slate-800">{n} day{n > 1 ? "s" : ""}</b> · leaves at {fmtTime(addDays(arrivalIso, n))}</>;
+              }}
+              triggerClassName="group flex h-11 w-full items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3.5 text-left font-semibold text-emerald-800 outline-none transition hover:border-emerald-300 hover:shadow-sm focus-visible:ring-4 focus-visible:ring-emerald-100 active:scale-[0.99]"
+              renderTrigger={({ open }) => (
+                <>
+                  <CalendarCheck className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 truncate">{fmtDateTime(checkout)}</span>
+                  <span className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold transition ${open ? "bg-emerald-200/70" : "text-emerald-600 group-hover:bg-emerald-200/50"}`}>
+                    Change <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+                  </span>
+                </>
+              )} />
+            <p className="mt-1.5 text-xs text-slate-500">{days} x 24 hours. Pick a date or set days below.</p>
           </div>
           <div className="order-2 sm:order-3 sm:col-span-2">
             <label className="label" id="days-label">Days paid</label>
@@ -340,6 +356,13 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
       </div>
     </form>
   );
+}
+
+/** Whole calendar days from one date to another (at least 1). */
+function daysBetween(from: Date, to: Date) {
+  const a = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
+  const b = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+  return Math.max(1, Math.min(365, Math.round((b - a) / 86_400_000)));
 }
 
 function nextMorning() {

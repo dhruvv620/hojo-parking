@@ -10,7 +10,7 @@ import { Check, ChevronDown } from "lucide-react";
 
 type Align = "start" | "end";
 
-function useFloatingPosition(open: boolean, trigger: React.RefObject<HTMLElement | null>, align: Align, matchWidth: boolean) {
+export function useFloatingPosition(open: boolean, trigger: React.RefObject<HTMLElement | null>, align: Align, matchWidth: boolean) {
   const [style, setStyle] = useState<React.CSSProperties>({ position: "fixed", top: -9999, left: -9999 });
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -50,7 +50,7 @@ function useFloatingPosition(open: boolean, trigger: React.RefObject<HTMLElement
   return { style, panelRef };
 }
 
-function useDismiss(open: boolean, close: () => void, refs: React.RefObject<HTMLElement | null>[]) {
+export function useDismiss(open: boolean, close: () => void, refs: React.RefObject<HTMLElement | null>[]) {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
@@ -63,7 +63,7 @@ function useDismiss(open: boolean, close: () => void, refs: React.RefObject<HTML
 }
 
 // Menus only open after a click, so document always exists here.
-function Portal({ children }: { children: React.ReactNode }) {
+export function Portal({ children }: { children: React.ReactNode }) {
   return typeof document === "undefined" ? null : createPortal(children, document.body);
 }
 
