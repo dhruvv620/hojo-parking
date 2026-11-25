@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
+import {
+  ArrowRightLeft, BedDouble, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
+  Hash, Info, LoaderCircle, LogIn, MapPin, Minus, Phone, Plus, RectangleHorizontal, Sparkles, SquareParking,
+  TriangleAlert, UserRound, X,
+} from "lucide-react";
+import { SectionTitle } from "./ui/bits";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
-import { addDays, fmtDateTime, fromLocalInput, toLocalInput } from "@/lib/time";
+import { addDays, fmtDateTime, fmtTime, fromLocalInput, toLocalInput } from "@/lib/time";
 import { CustomerSuggest, type Customer } from "./CustomerSuggest";
 
 type Props = {
@@ -48,6 +54,7 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
   // which field the look-up drop-down is showing under (Add Car only)
   const [lookup, setLookup] = useState<null | "guest_name" | "license_plate" | "confirmation_number">(null);
   const [picked, setPicked] = useState<string | null>(null);
+  const lookupInput = useRef<HTMLInputElement | null>(null);
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
 
@@ -72,7 +79,10 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
       ? {
           onFocus: () => setLookup(k),
           onBlur: () => setTimeout(() => setLookup((cur) => (cur === k ? null : cur)), 150),
-          suggest: lookup === k ? <CustomerSuggest query={f[k]} onPick={pickCustomer} /> : null,
+          inputRef: lookup === k ? lookupInput : undefined,
+          suggest: lookup === k ? (
+            <CustomerSuggest query={f[k]} onPick={pickCustomer} inputRef={lookupInput} onClose={() => setLookup(null)} />
+          ) : null,
         }
       : {};
 
@@ -141,89 +151,109 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
+    <form onSubmit={onSubmit} className="space-y-5 pb-24 sm:pb-0">
       {/* When */}
-      <section className="card p-5">
-        <h2 className="mb-4 text-lg font-bold">Stay</h2>
+      <section className="card p-5 sm:p-6">
+        <SectionTitle icon={<CalendarClock />} title="Stay" sub="How long the car is staying." />
 
         {isNew && (
-          <div className="mb-4 grid grid-cols-2 gap-2">
-            <ModeButton active={mode === "now"} onClick={() => setMode("now")} title="Arriving now" sub="Car is here, parking it" />
-            <ModeButton active={mode === "future"} onClick={() => setMode("future")} title="Future reservation" sub="Coming on a later date" />
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <Choice active={mode === "now"} onClick={() => setMode("now")} icon={<LogIn />} title="Arriving now" sub="Car is here, parking it" />
+            <Choice active={mode === "future"} onClick={() => setMode("future")} icon={<CalendarDays />} title="Future reservation" sub="Coming on a later date" />
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div>
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="order-1">
             <label className="label">{isFuture ? "Expected arrival" : "Arrived"}</label>
             {isNew && !isFuture ? (
-              <div className="input bg-slate-50 text-slate-600">Now ({fmtDateTime(new Date())})</div>
+              <div className="input-readonly gap-2"><Clock className="h-4 w-4 text-slate-400" /> Now, {fmtTime(new Date())}</div>
             ) : (
               <input type="datetime-local" className="input" required
                 value={isFuture ? f.futureArrival : f.arrival}
                 onChange={(e) => set(isFuture ? "futureArrival" : "arrival", e.target.value)} />
             )}
           </div>
-          <div>
-            <label className="label">Days paid</label>
-            <div className="flex gap-1.5">
-              <input type="number" min={1} max={365} className="input w-20 text-center" value={f.days}
-                onChange={(e) => set("days", e.target.value === "" ? ("" as unknown as number) : Number(e.target.value))} />
-              {[1, 2, 3, 7].map((d) => (
-                <button type="button" key={d} onClick={() => set("days", d)}
-                  className={`flex-1 rounded-xl border text-sm font-semibold ${days === d ? "border-brand-500 bg-brand-50 text-brand-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
-                  {d}
-                </button>
-              ))}
+          <div className="order-3 sm:order-2">
+            <label className="label">Leaves by</label>
+            <div className="flex h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100/60 px-3.5 font-semibold text-emerald-800">
+              <CalendarCheck className="h-4 w-4" /> {fmtDateTime(checkout)}
             </div>
+            <p className="mt-1.5 text-xs text-slate-500">{days} x 24 hours. Frees up on its own.</p>
           </div>
-          <div>
-            <label className="label">Leaves by (automatic)</label>
-            <div className="input bg-emerald-50 font-semibold text-emerald-800">{fmtDateTime(checkout)}</div>
-            <p className="mt-1 text-xs text-slate-500">{days} x 24 hours. Spot frees up on its own.</p>
+          <div className="order-2 sm:order-3 sm:col-span-2">
+            <label className="label" id="days-label">Days paid</label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex h-11 items-center self-start rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgb(16_24_40/0.04)]" aria-labelledby="days-label">
+                <button type="button" aria-label="One day less" disabled={days <= 1} onClick={() => set("days", Math.max(1, days - 1))}
+                  className="flex h-full w-10 items-center justify-center rounded-l-xl text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 active:scale-95 disabled:opacity-30">
+                  <Minus className="h-4 w-4" />
+                </button>
+                <input type="number" min={1} max={365} value={f.days} aria-label="Days paid"
+                  className="h-full w-12 border-x border-slate-200 text-center text-base font-bold tabular-nums outline-none [appearance:textfield] focus:bg-brand-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  onChange={(e) => set("days", e.target.value === "" ? ("" as unknown as number) : Number(e.target.value))} />
+                <button type="button" aria-label="One day more" onClick={() => set("days", Math.min(365, days + 1))}
+                  className="flex h-full w-10 items-center justify-center rounded-r-xl text-slate-500 transition hover:bg-slate-50 hover:text-slate-900 active:scale-95">
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="grid flex-1 grid-cols-4 gap-1.5">
+                {[1, 2, 3, 7].map((d) => (
+                  <button type="button" key={d} onClick={() => set("days", d)} data-active={days === d}
+                    className="choice h-11 px-1 text-center text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700">
+                    {d === 7 ? "1 week" : `${d} day${d > 1 ? "s" : ""}`}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
         {isFuture && (
-          <p className="mt-4 rounded-xl bg-violet-50 px-4 py-3 text-sm text-violet-800">
-            This will show under <b>Upcoming reservations</b> and will not take a spot. When the guest shows up, press{" "}
-            <b>Arrived</b>: the paid days start counting from that moment.
-          </p>
+          <div className="mt-5 flex gap-3 rounded-xl border border-violet-100 bg-violet-50/70 px-4 py-3 text-sm text-violet-900">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />
+            <p>
+              Shows under <b>Upcoming reservations</b> and does not take a spot. When the guest shows up, press <b>Arrived</b>.
+              The paid days start counting from that moment.
+            </p>
+          </div>
         )}
       </section>
 
       {/* Guest + car */}
-      <section className="card p-5">
-        <h2 className="text-lg font-bold">Guest and car</h2>
-        <p className="mb-4 text-sm text-slate-500">
-          {isNew
-            ? "Start typing a name, plate or confirmation number. Returning customers and waiting reservations will pop up."
-            : "Edit any detail and press Save changes."}
-        </p>
+      <section className="card p-5 sm:p-6">
+        <SectionTitle icon={<UserRound />} title="Guest and car"
+          sub={isNew ? "Type a name, plate or confirmation #. Returning guests and reservations pop up." : "Edit any detail and press Save changes."} />
+
         {picked && (
-          <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+          <div className="mt-4 flex animate-rise items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+            <Sparkles className="h-4 w-4 shrink-0 text-emerald-500" />
             <span className="flex-1">Filled in from <b>{picked}</b>&apos;s last visit. Check the details are still right.</span>
-            <button type="button" className="font-semibold underline" onClick={() => setPicked(null)}>OK</button>
+            <button type="button" aria-label="Dismiss" className="rounded-md p-1 transition hover:bg-emerald-100" onClick={() => setPicked(null)}>
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Guest name *" value={f.guest_name} onChange={(v) => set("guest_name", v)} autoFocus={isNew} required
-            {...lookupProps("guest_name")} />
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <Field label="Guest name" required value={f.guest_name} onChange={(v) => set("guest_name", v)} autoFocus={isNew}
+            icon={<UserRound />} placeholder="Full name" {...lookupProps("guest_name")} />
           <div>
-            <label className="label">Booked</label>
+            <span className="label">Booked</span>
             <div className="grid grid-cols-2 gap-2">
               {(["walk_in", "online"] as const).map((s) => (
-                <button type="button" key={s} onClick={() => set("source", s)}
-                  className={`rounded-xl border py-2.5 text-sm font-semibold ${f.source === s ? "border-brand-500 bg-brand-50 text-brand-700" : "border-slate-300 text-slate-600 hover:bg-slate-50"}`}>
+                <button type="button" key={s} onClick={() => set("source", s)} data-active={f.source === s}
+                  className="choice flex h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700">
+                  {s === "walk_in" ? <DoorOpen className="h-4 w-4" /> : <Globe className="h-4 w-4" />}
                   {s === "walk_in" ? "Walk-in" : "Online"}
                 </button>
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-[1fr_90px] gap-2">
-            <Field label="Plate number *" value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} required mono
-              {...lookupProps("license_plate")} />
-            <Field label="State" value={f.plate_state} onChange={(v) => set("plate_state", v.toUpperCase())} placeholder="NJ" />
+          <div className="grid grid-cols-[1fr_84px] gap-2">
+            <Field label="Plate number" required value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} mono
+              icon={<RectangleHorizontal />} placeholder="ABC 1234" {...lookupProps("license_plate")} />
+            <Field label="State" value={f.plate_state} onChange={(v) => set("plate_state", v.toUpperCase().slice(0, 3))} placeholder="NJ" />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <Field label="Make" value={f.make} onChange={(v) => set("make", v)} placeholder="Toyota" />
@@ -231,50 +261,53 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
             <Field label="Color" value={f.color} onChange={(v) => set("color", v)} placeholder="Gray" />
           </div>
           <Field label="Confirmation #" value={f.confirmation_number} onChange={(v) => set("confirmation_number", v)}
-            placeholder="From the online booking" mono {...lookupProps("confirmation_number")} />
+            icon={<Hash />} placeholder="From the online booking" mono {...lookupProps("confirmation_number")} />
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Phone" value={f.phone} onChange={(v) => set("phone", v)} type="tel" />
-            <Field label="Room #" value={f.room_number} onChange={(v) => set("room_number", v)} />
+            <Field label="Phone" value={f.phone} onChange={(v) => set("phone", v)} type="tel" icon={<Phone />} placeholder="Optional" />
+            <Field label="Room #" value={f.room_number} onChange={(v) => set("room_number", v)} icon={<BedDouble />} placeholder="Optional" />
           </div>
           <div className="sm:col-span-2">
-            <label className="label">Notes</label>
-            <textarea className="input min-h-20" value={f.notes} onChange={(e) => set("notes", e.target.value)} />
+            <label className="label" htmlFor="notes">Notes</label>
+            <textarea id="notes" className="input min-h-20 resize-y" placeholder="Anything staff should know (optional)"
+              value={f.notes} onChange={(e) => set("notes", e.target.value)} />
           </div>
         </div>
       </section>
 
       {/* Where */}
       {!isFuture && (
-        <section className="card p-5">
-          <h2 className="mb-1 text-lg font-bold">Where is it parked?</h2>
-          <p className="mb-4 text-sm text-slate-500">
-            {insideCount} of {LOT_CAPACITY} inside spots are taken{wasInside ? " (including this car)" : ""}.
-          </p>
+        <section className="card p-5 sm:p-6">
+          <SectionTitle icon={<MapPin />} title="Where is it parked?"
+            sub={`${insideCount} of ${LOT_CAPACITY} inside spots taken${wasInside ? " (including this car)" : ""}.`} />
           {lotFull && (
-            <div className="mb-4 rounded-xl bg-red-600 px-4 py-3 text-white">
-              <b>LOT FULL.</b> No inside spots left. This car will be logged as parking <b>outside the fence</b>.
+            <div className="mt-4 flex items-center gap-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm text-white shadow-md shadow-red-600/20">
+              <TriangleAlert className="h-5 w-5 shrink-0" />
+              <span><b>LOT FULL.</b> No inside spots left. This car will be logged as parking <b>outside the fence</b>.</span>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-2">
-            <button type="button" disabled={lotFull} onClick={() => set("location", "inside")}
-              className={`rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-40 ${loc === "inside" ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100" : "border-slate-300 hover:bg-slate-50"}`}>
-              <div className="font-bold">Inside the fence</div>
-              <div className="text-xs text-slate-500">Counts toward the {LOT_CAPACITY}</div>
-            </button>
-            <button type="button" onClick={() => set("location", "outside")}
-              className={`rounded-xl border p-4 text-left ${loc === "outside" ? "border-sky-500 bg-sky-50 ring-2 ring-sky-100" : "border-slate-300 hover:bg-slate-50"}`}>
-              <div className="font-bold">Outside the fence</div>
-              <div className="text-xs text-slate-500">Lot full or overflow</div>
-            </button>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <Choice active={loc === "inside"} disabled={lotFull} onClick={() => set("location", "inside")}
+              icon={<SquareParking />} title="Inside the fence" sub={`Counts toward the ${LOT_CAPACITY}`} />
+            <Choice active={loc === "outside"} onClick={() => set("location", "outside")}
+              icon={<ArrowRightLeft />} title="Outside the fence" sub="Lot full or overflow" />
           </div>
 
           {showInside && (
-            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4">
-              <input type="checkbox" className="mt-1 h-5 w-5 accent-amber-600" checked={f.fence_told}
-                onChange={(e) => set("fence_told", e.target.checked)} />
+            <label className={`mt-4 flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
+              f.fence_told ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50 hover:bg-amber-100/60"}`}>
+              <span className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${
+                f.fence_told ? "border-emerald-500 bg-emerald-500 text-white" : "border-amber-400 bg-white"}`}>
+                <input type="checkbox" className="absolute inset-0 cursor-pointer opacity-0" checked={f.fence_told}
+                  onChange={(e) => set("fence_told", e.target.checked)} />
+                {f.fence_told && <Check className="h-4 w-4" strokeWidth={3} />}
+              </span>
               <span>
-                <span className="block font-bold text-amber-900">Tell the guest: park INSIDE the fence only.</span>
-                <span className="text-sm text-amber-800">Tick when you have told them.</span>
+                <span className={`block font-bold ${f.fence_told ? "text-emerald-900" : "text-amber-900"}`}>
+                  Tell the guest: park INSIDE the fence only.
+                </span>
+                <span className={`text-sm ${f.fence_told ? "text-emerald-700" : "text-amber-800"}`}>
+                  {f.fence_told ? "Done. Guest has been told." : "Tick when you have told them."}
+                </span>
               </span>
             </label>
           )}
@@ -282,7 +315,8 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
       )}
 
       {error && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div role="alert" className="flex animate-rise flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <CircleAlert className="h-4 w-4 shrink-0" />
           <span className="flex-1">{error}</span>
           {fullRetry && (
             <button type="button" className="btn-primary btn-sm" onClick={() => { set("location", "outside"); save(true); }}>
@@ -292,10 +326,17 @@ export function CarForm({ record, insideCount, onSaved }: Props) {
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <button type="submit" className="btn-primary px-8 py-3 text-base" disabled={busy}>
-          {busy ? "Saving..." : isNew ? (isFuture ? "Save reservation" : "Check in car") : "Save changes"}
-        </button>
+      {/* Save bar: sticks to the bottom on phones */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/90 p-3 backdrop-blur-xl sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+        <div className="flex items-center justify-end gap-3">
+          <span className="mr-auto hidden text-sm text-slate-500 sm:block">
+            {isFuture ? "Saved as a future reservation." : `Leaves ${fmtDateTime(checkout)}.`}
+          </span>
+          <button type="submit" className="btn-primary btn-lg w-full sm:w-auto" disabled={busy}>
+            {busy ? <LoaderCircle className="animate-spin" /> : isNew ? (isFuture ? <CalendarCheck /> : <LogIn />) : <Check />}
+            {busy ? "Saving..." : isNew ? (isFuture ? "Save reservation" : "Check in car") : "Save changes"}
+          </button>
+        </div>
       </div>
     </form>
   );
@@ -308,27 +349,48 @@ function nextMorning() {
   return d;
 }
 
-function ModeButton({ active, onClick, title, sub }: { active: boolean; onClick: () => void; title: string; sub: string }) {
+function Choice({ active, onClick, icon, title, sub, disabled }: {
+  active: boolean; onClick: () => void; icon: React.ReactNode; title: string; sub: string; disabled?: boolean;
+}) {
   return (
-    <button type="button" onClick={onClick}
-      className={`rounded-xl border p-3 text-left ${active ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100" : "border-slate-300 hover:bg-slate-50"}`}>
-      <div className="font-bold">{title}</div>
-      <div className="text-xs text-slate-500">{sub}</div>
+    <button type="button" onClick={onClick} data-active={active} disabled={disabled} aria-pressed={active}
+      className="choice group relative flex flex-col items-start gap-2.5 p-3.5 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors [&>svg]:h-5 [&>svg]:w-5 ${
+        active ? "bg-brand-600 text-white shadow-md shadow-brand-600/30" : "bg-slate-100 text-slate-500"}`}>
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className={`block font-bold ${active ? "text-brand-900" : "text-slate-800"}`}>{title}</span>
+        <span className="block text-xs text-slate-500 sm:truncate">{sub}</span>
+      </span>
+      <span className={`absolute right-3 top-3 flex h-5 w-5 sm:static shrink-0 items-center justify-center rounded-full border-2 transition ${
+        active ? "border-brand-600 bg-brand-600 text-white" : "border-slate-300"}`}>
+        {active && <Check className="h-3 w-3" strokeWidth={3.5} />}
+      </span>
     </button>
   );
 }
 
-function Field({ label, value, onChange, type = "text", placeholder, required, autoFocus, mono, onFocus, onBlur, suggest }: {
+function Field({ label, value, onChange, type = "text", placeholder, required, autoFocus, mono, icon, onFocus, onBlur, onKeyDown, inputRef, suggest }: {
   label: string; value: string; onChange: (v: string) => void; type?: string;
-  placeholder?: string; required?: boolean; autoFocus?: boolean; mono?: boolean;
-  onFocus?: () => void; onBlur?: () => void; suggest?: React.ReactNode;
+  placeholder?: string; required?: boolean; autoFocus?: boolean; mono?: boolean; icon?: React.ReactNode;
+  onFocus?: () => void; onBlur?: () => void; onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  inputRef?: React.Ref<HTMLInputElement>; suggest?: React.ReactNode;
 }) {
+  const id = useId();
   return (
     <div className="relative">
-      <label className="label">{label}</label>
-      <input type={type} className={`input ${mono ? "font-mono uppercase placeholder:normal-case placeholder:font-sans" : ""}`} value={value}
-        placeholder={placeholder} required={required} autoFocus={autoFocus} autoComplete="off"
-        onFocus={onFocus} onBlur={onBlur} onChange={(e) => onChange(e.target.value)} />
+      <label className="label" htmlFor={id}>
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        {icon && (
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 [&>svg]:h-4 [&>svg]:w-4">{icon}</span>
+        )}
+        <input id={id} ref={inputRef} type={type} value={value} placeholder={placeholder} required={required} autoFocus={autoFocus}
+          autoComplete="off" onFocus={onFocus} onBlur={onBlur} onKeyDown={onKeyDown} onChange={(e) => onChange(e.target.value)}
+          className={`input ${icon ? "pl-9" : ""} ${mono ? "font-mono uppercase tracking-wide placeholder:font-sans placeholder:normal-case placeholder:tracking-normal" : ""}`} />
+      </div>
       {suggest}
     </div>
   );

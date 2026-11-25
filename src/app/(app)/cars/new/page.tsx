@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { CarForm } from "@/components/CarForm";
 import { useParking } from "@/lib/useParking";
 import { useToast } from "@/components/Toast";
+import { ArrowLeft } from "lucide-react";
 
 export default function NewCarPage() {
   const router = useRouter();
@@ -13,10 +14,16 @@ export default function NewCarPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link href="/" className="text-sm font-semibold text-brand-600 hover:underline">&larr; Dashboard</Link>
-      <h1 className="mb-5 mt-2 text-2xl font-bold">Add a car</h1>
+      <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-brand-700">
+        <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> Dashboard
+      </Link>
+      <h1 className="mb-1 mt-3 text-2xl font-bold tracking-tight sm:text-3xl">Add a car</h1>
+      <p className="mb-6 text-sm text-slate-500">Check in a guest who is here now, or save a reservation for later.</p>
       {loading ? (
-        <p className="text-slate-500">Loading...</p>
+        <div className="space-y-5" aria-busy="true">
+          <div className="skeleton h-56 rounded-2xl" />
+          <div className="skeleton h-80 rounded-2xl" />
+        </div>
       ) : (
         <CarForm insideCount={inside.length}
           onSaved={(r, note) => {
