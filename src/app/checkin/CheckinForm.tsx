@@ -25,7 +25,8 @@ const niceError = (m: string) => m.replace(/^[A-Z_]+:\s*/, "");
 export function CheckinForm() {
   const token = useSearchParams().get("k") ?? "";
   const [status, setStatus] = useState<"loading" | "invalid" | "ready">("loading");
-  const [lot1Free, setLot1Free] = useState<number | null>(null);
+  // whether Lot 1 has room (guests only learn yes/no, never the number of spots)
+  const [lot1Open, setLot1Open] = useState(true);
   const [lotsFull, setLotsFull] = useState<LotId[]>([]);
   const [pick, setPick] = useState<LotId | null>(null);
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
@@ -38,9 +39,13 @@ export function CheckinForm() {
 
   useEffect(() => {
     if (!token) { setStatus("invalid"); return; }
-    supabaseBrowser().rpc("guest_lot_info", { p_token: token }).then(({ data, error }: { data: { ok: boolean; lot1_available?: number; lots_full?: LotId[] } | null; error: unknown }) => {
+    supabaseBrowser().rpc("guest_lot_info", { p_token: token }).then(({ data, error }: { data: { ok: boolean; lot1_open?: boolean; lot1_available?: number; lots_full?: LotId[] } | null; error: unknown }) => {
       if (error || !data?.ok) setStatus("invalid");
-      else { setLot1Free(data.lot1_available ?? null); setLotsFull(data.lots_full ?? []); setStatus("ready"); }
+      else {
+        setLot1Open(data.lot1_open ?? (data.lot1_available ?? 1) > 0);
+        setLotsFull(data.lots_full ?? []);
+        setStatus("ready");
+      }
     });
   }, [token]);
 
@@ -49,11 +54,11 @@ export function CheckinForm() {
   // lots this guest may use: allowed for their vehicle, not marked Full by staff,
   // and (Lot 1) not out of spots. Cars & SUVs: Lot 1 / Lot 3; trucks: Lot 2 / Lot 3.
   const options: LotId[] = vehicle
-    ? (["lot1", "lot2", "lot3"] as LotId[]).filter((id) => lotFits(id, vehicle) && !lotsFull.includes(id) && !(id === "lot1" && lot1Free === 0))
+    ? (["lot1", "lot2", "lot3"] as LotId[]).filter((id) => lotFits(id, vehicle) && !lotsFull.includes(id) && !(id === "lot1" && !lot1Open))
     : [];
   const lot = lotById(pick && options.includes(pick) ? pick : options[0]);
   // the lot they'd normally get, for the "ask the front desk" message when nothing is open
-  const usual = vehicle ? lotById(suggestLot(vehicle, lot1Free === 0)) : null;
+  const usual = vehicle ? lotById(suggestLot(vehicle, !lot1Open)) : null;
   const askDesk = !!vehicle && options.length === 0;
   const missing = {
     vehicle: !vehicle,
@@ -222,7 +227,7 @@ export function CheckinForm() {
                             <span className="font-extrabold">{o.name}</span>
                           </span>
                           <span className="block text-xs text-slate-500">
-                            {id === "lot1" && lot1Free !== null ? `${lot1Free} spot${lot1Free === 1 ? "" : "s"} free` : o.rule}
+                            {o.rule}
                           </span>
                         </span>
                         {active && (
@@ -248,9 +253,6 @@ export function CheckinForm() {
                 </>
               )}
               <div className="mt-3 text-sm text-slate-600"><b className="text-slate-800">{lot.name}</b> · {lot.place}</div>
-              {vehicle !== "truck" && lot1Free === 0 && !lotsFull.includes("lot1") && (
-                <p className="mt-1 text-xs font-medium text-amber-700">Lot 1 has no spots right now.</p>
-              )}
               <div className="mt-3"><DirectionsButtons lot={lot.id} /></div>
             </div>
           ) : null}

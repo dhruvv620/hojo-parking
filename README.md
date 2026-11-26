@@ -99,6 +99,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-9-history-paging.sql`: fast History paging and sorting by "Left" (the page works without it, but run it).
 - `supabase/update-10-lot-full-switches.sql`: the **Lots open for guests** switches on the dashboard.
 - `supabase/update-11-guest-lot-choice.sql`: guests choose between the lots they may use (cars & SUVs: Lot 1 or Lot 3; trucks: Lot 2 or Lot 3).
+- `supabase/update-12-hide-spot-count.sql`: the guest page no longer receives Lot 1's spot count.
 
 ## Changing the lot size
 
