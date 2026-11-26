@@ -68,7 +68,7 @@ Open the link, log in with a user from step 3, and you're ready.
 - **Guest extends (or shortens) their stay:** open the car (or use **⋯** on the dashboard) > **Update stay**. Pick the new check-out date, choose **Paid / Not paid yet / No charge**, add the amount and a note. It all shows in the car's **Stay history**, with who made the change and when. Unpaid changes show an amber badge until someone presses **Mark paid**.
 - **Guest leaves early:** open the car (or use the table) > **Check out now**.
 - **Space opens up for a car parked outside:** press **Move inside** in the table.
-- **Mark where a car is parked (optional):** on Add Car or a car's page, tap the lot picture on the right (**Spot on the map**) to drop a pin. Dark dots show where other cars were marked. Use the expand button for a bigger map. To change the picture, replace `public/lot-map.webp` with a new top-down screenshot of the lot (pins are saved as positions on the picture, so keep the same framing).
+- **Mark where a car is parked (optional):** on Add Car or a car's page, use **Spot on the map** on the right. Pick the area (**Fenced lot**, **401 lot** or **Hotel lot**), then tap where the car is to drop a pin. Dark dots show where other cars were marked. Use the expand button for a bigger map. To change a picture, replace the file in `public/maps/` with a new top-down screenshot of the same area and framing, and update its width/height in `src/components/LotMap.tsx` (pins are saved as positions on the picture).
 - **Find an old record:** **History** > search by name or plate. **Download CSV** gives a spreadsheet.
 
 Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it opens like an app.
@@ -80,6 +80,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-2-confirmation-number.sql`: adds the Confirmation # field and faster customer look-up.
 - `supabase/update-3-stay-history.sql`: adds **Update stay** and the **Stay history** log (extensions, payments, notes).
 - `supabase/update-4-map-pin.sql`: adds the optional **Spot on the map** pin (run update 3 first).
+- `supabase/update-5-map-areas.sql`: lets the pin be on any of the three parking areas.
 
 ## Changing the lot size
 

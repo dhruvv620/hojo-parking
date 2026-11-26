@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { SectionTitle } from "./ui/bits";
 import { DatePicker } from "./ui/DatePicker";
-import { LotMapCard, type OtherPin, type Pin } from "./LotMap";
+import { LotMapCard, mapById, type OtherPin, type Pin } from "./LotMap";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
@@ -53,7 +53,9 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
     days: record?.days ?? 1,
     fence_told: record?.fence_told ?? false,
     notes: record?.notes ?? "",
-    spot: (record?.spot_x != null && record?.spot_y != null ? { x: Number(record.spot_x), y: Number(record.spot_y) } : null) as Pin | null,
+    spot: (record?.spot_x != null && record?.spot_y != null
+      ? { map: mapById(record.spot_map).id, x: Number(record.spot_x), y: Number(record.spot_y) }
+      : null) as Pin | null,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -129,6 +131,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       notes: f.notes.trim() || null,
       spot_x: isFuture ? null : f.spot?.x ?? null,
       spot_y: isFuture ? null : f.spot?.y ?? null,
+      spot_map: isFuture ? null : f.spot?.map ?? null,
       ...(isNew ? { status: isFuture ? "reserved" : "parked" } : {}),
     };
 

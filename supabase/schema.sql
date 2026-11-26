@@ -50,6 +50,10 @@ create table if not exists public.parking_records (
 -- Stored as a position on the map picture: 0-100 from the left and from the top.
 alter table public.parking_records add column if not exists spot_x numeric(5, 2) check (spot_x between 0 and 100);
 alter table public.parking_records add column if not exists spot_y numeric(5, 2) check (spot_y between 0 and 100);
+-- Which parking area the map pin is on: fenced (402/406 E Melvin St),
+-- lot401 (401 E Melvin St) or hotel (behind the hotel, 4120 E Van Buren St).
+alter table public.parking_records add column if not exists spot_map text;
+update public.parking_records set spot_map = 'fenced' where spot_x is not null and spot_map is null;
 -- confirmation number:
 alter table public.parking_records add column if not exists confirmation_number text;
 
@@ -236,7 +240,7 @@ begin
   if new.room_number   is distinct from old.room_number   then changed := array_append(changed, 'room'::text); end if;
   if new.confirmation_number is distinct from old.confirmation_number then changed := array_append(changed, 'confirmation #'::text); end if;
   if new.notes         is distinct from old.notes         then changed := array_append(changed, 'notes'::text); end if;
-  if new.spot_x is distinct from old.spot_x or new.spot_y is distinct from old.spot_y then changed := array_append(changed, 'map pin'::text); end if;
+  if new.spot_x is distinct from old.spot_x or new.spot_y is distinct from old.spot_y or new.spot_map is distinct from old.spot_map then changed := array_append(changed, 'map pin'::text); end if;
 
   if k is null and cardinality(changed) > 0 then k := 'edited'; end if;
   if k is null and new.change_note is not null then k := 'note'; end if;

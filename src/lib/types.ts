@@ -25,6 +25,8 @@ export interface ParkingRecord {
   /** Map pin: 0-100 from left / top of the lot picture. */
   spot_x: number | null;
   spot_y: number | null;
+  /** Which parking area the pin is on: fenced, lot401 or hotel. */
+  spot_map: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -55,7 +57,14 @@ export function leftAt(r: ParkingRecord): string | null {
 export function pinsOf(records: ParkingRecord[]) {
   return records
     .filter((r) => r.spot_x != null && r.spot_y != null)
-    .map((r) => ({ id: r.id, x: Number(r.spot_x), y: Number(r.spot_y), label: r.license_plate, sub: r.guest_name }));
+    .map((r) => ({
+      id: r.id,
+      map: (r.spot_map === "lot401" || r.spot_map === "hotel" ? r.spot_map : "fenced") as "fenced" | "lot401" | "hotel",
+      x: Number(r.spot_x),
+      y: Number(r.spot_y),
+      label: r.license_plate,
+      sub: r.guest_name,
+    }));
 }
 
 export function carLabel(r: Pick<ParkingRecord, "color" | "make" | "model">) {
