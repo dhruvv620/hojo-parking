@@ -6,14 +6,15 @@ import { CarForm } from "@/components/CarForm";
 import { useParking } from "@/lib/useParking";
 import { useToast } from "@/components/Toast";
 import { ArrowLeft } from "lucide-react";
+import { pinsOf } from "@/lib/types";
 
 export default function NewCarPage() {
   const router = useRouter();
   const toast = useToast();
-  const { inside, loading } = useParking();
+  const { inside, parked, loading } = useParking();
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <Link href="/" className="group inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 transition hover:text-brand-700">
         <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> Dashboard
       </Link>
@@ -25,7 +26,7 @@ export default function NewCarPage() {
           <div className="skeleton h-80 rounded-2xl" />
         </div>
       ) : (
-        <CarForm insideCount={inside.length}
+        <CarForm insideCount={inside.length} otherPins={pinsOf(parked)}
           onSaved={(r, note) => {
             if (note) toast(note, "warn");
             else if (r.status === "reserved") toast(`Reservation saved for ${r.guest_name}.`);

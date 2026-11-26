@@ -7,7 +7,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { CarForm } from "@/components/CarForm";
 import { useParking } from "@/lib/useParking";
 import { useRun, useToast } from "@/components/Toast";
-import { carLabel, liveStatus, type LiveStatus, type ParkingRecord } from "@/lib/types";
+import { carLabel, liveStatus, pinsOf, type LiveStatus, type ParkingRecord } from "@/lib/types";
 import { fmtDateTime, fmtDuration } from "@/lib/time";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu } from "@/components/ui/Dropdown";
@@ -65,7 +65,7 @@ export default function EditCarPage() {
   }
   if (!record || lot.loading)
     return (
-      <div className="mx-auto max-w-3xl space-y-5" aria-busy="true">
+      <div className="mx-auto max-w-6xl space-y-5" aria-busy="true">
         <div className="skeleton h-5 w-28" />
         <div className="skeleton h-40 rounded-2xl" />
         <div className="skeleton h-64 rounded-2xl" />
@@ -94,7 +94,7 @@ export default function EditCarPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <BackLink />
 
       {/* Header card */}
@@ -172,7 +172,7 @@ export default function EditCarPage() {
       <div className="mt-5 space-y-5">
       <StayHistory recordId={record.id} refreshKey={formKey} onUnpaidCount={setUnpaid} />
 
-      <CarForm key={formKey} record={record} insideCount={lot.inside.length} onUpdateStay={() => setStayDialog(0)}
+      <CarForm key={formKey} record={record} insideCount={lot.inside.length} otherPins={pinsOf(lot.parked)} onUpdateStay={() => setStayDialog(0)}
         onSaved={(r, note) => {
           toast(note ?? "Changes saved.", note ? "warn" : "ok");
           setRecord(r);

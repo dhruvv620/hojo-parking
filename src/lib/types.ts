@@ -22,6 +22,9 @@ export interface ParkingRecord {
   checked_out_at: string | null;
   fence_told: boolean;
   notes: string | null;
+  /** Map pin: 0-100 from left / top of the lot picture. */
+  spot_x: number | null;
+  spot_y: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +49,13 @@ export function leftAt(r: ParkingRecord): string | null {
   if (r.status === "checked_out") return r.checked_out_at;
   if (r.status === "parked") return r.checkout_at;
   return null;
+}
+
+/** Map pins of parked cars (for faint dots on the map). */
+export function pinsOf(records: ParkingRecord[]) {
+  return records
+    .filter((r) => r.spot_x != null && r.spot_y != null)
+    .map((r) => ({ id: r.id, x: Number(r.spot_x), y: Number(r.spot_y), label: r.license_plate, sub: r.guest_name }));
 }
 
 export function carLabel(r: Pick<ParkingRecord, "color" | "make" | "model">) {

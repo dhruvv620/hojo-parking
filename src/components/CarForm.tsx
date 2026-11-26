@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { SectionTitle } from "./ui/bits";
 import { DatePicker } from "./ui/DatePicker";
+import { LotMapCard, type OtherPin, type Pin } from "./LotMap";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
@@ -22,9 +23,11 @@ type Props = {
   onSaved: (r: ParkingRecord, note?: string) => void;
   /** Edit mode: opens the Update stay pop-up instead of editing days here. */
   onUpdateStay?: () => void;
+  /** Other parked cars' map pins, shown as faint dots. */
+  otherPins?: OtherPin[];
 };
 
-export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
+export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins = [] }: Props) {
   const isNew = !record;
   const wasInside =
     !!record && record.status === "parked" && record.location === "inside" &&
@@ -50,6 +53,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
     days: record?.days ?? 1,
     fence_told: record?.fence_told ?? false,
     notes: record?.notes ?? "",
+    spot: (record?.spot_x != null && record?.spot_y != null ? { x: Number(record.spot_x), y: Number(record.spot_y) } : null) as Pin | null,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +127,8 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
       days,
       fence_told: location === "inside" ? f.fence_told : false,
       notes: f.notes.trim() || null,
+      spot_x: isFuture ? null : f.spot?.x ?? null,
+      spot_y: isFuture ? null : f.spot?.y ?? null,
       ...(isNew ? { status: isFuture ? "reserved" : "parked" } : {}),
     };
 
@@ -154,7 +160,8 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-5 pb-24 sm:pb-0">
+    <form onSubmit={onSubmit} className="grid grid-cols-1 gap-5 pb-24 sm:pb-0 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+      <div className="min-w-0 space-y-5">
       {/* When */}
       <section className="card p-5 sm:p-6">
         <SectionTitle icon={<CalendarClock />} title="Stay" sub="How long the car is staying." />
@@ -380,6 +387,15 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay }: Props) {
           </button>
         </div>
       </div>
+      </div>
+
+      {/* Map: small card on the right (below the form on phones) */}
+      {!isFuture && (
+        <aside className="lg:sticky lg:top-24">
+          <LotMapCard pin={f.spot} onChange={(p) => set("spot", p)} others={otherPins.filter((o) => o.id !== record?.id)}
+            plate={f.license_plate.trim() || undefined} />
+        </aside>
+      )}
     </form>
   );
 }
