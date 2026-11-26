@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRightLeft, ArrowUpDown, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
+  ArrowRightLeft, ArrowUpDown, Ban, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
   Pencil, Plus, Search, SquareParking, TriangleAlert, Undo2, X,
 } from "lucide-react";
 import { useParking } from "@/lib/useParking";
@@ -16,6 +16,8 @@ import { checkOutNow, markArrived, moveToLot } from "@/lib/actions";
 import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { useRun, useToast } from "@/components/Toast";
+import { Switch } from "@/components/ui/Switch";
+import { useLotsFull } from "@/lib/useLotsFull";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu, Portal, Select } from "@/components/ui/Dropdown";
 import { SortHeader } from "@/components/ui/SortHeader";
@@ -39,7 +41,10 @@ export default function Dashboard() {
     if (seen.current) {
       for (const r of p.records) {
         if (!seen.current.has(r.id) && r.source === "guest_form") {
-          toast(`New self check-in: ${r.guest_name} (${r.license_plate}) → ${lotName(recordLot(r))}`);
+          const lot = recordLot(r);
+          toast(lot
+            ? `New self check-in: ${r.guest_name} (${r.license_plate}) → ${lotName(lot)}`
+            : `New self check-in: ${r.guest_name} (${r.license_plate}) needs a lot. They were told to ask the front desk.`, lot ? "ok" : "warn");
         }
       }
     }
@@ -103,6 +108,7 @@ export default function Dashboard() {
         </div>
 
         <aside className="space-y-6">
+          <LotSwitches />
           <UpcomingPanel upcoming={p.upcoming} parked={p.parked} now={p.now}
             onArrived={(r) => run(markArrived(r, p.isFull), `${r.guest_name} checked in.`)} />
           <LeavingToday cars={p.leavingToday} now={p.now} />
@@ -148,7 +154,7 @@ function Overview({ byLot, total, available, arrivingToday }: {
   const full = available === 0;
   const r = 44;
   const c = 2 * Math.PI * r;
-  const parts = [...LOTS.map((l) => ({ id: l.id, name: l.name, dot: l.dot, n: byLot[l.id].length })), { id: "none", name: "No lot", dot: "bg-slate-300", n: byLot.none.length }]
+  const parts = [...LOTS.map((l) => ({ id: l.id, name: l.name, dot: l.dot, n: byLot[l.id].length })), { id: "none", name: "Needs a lot", dot: "bg-amber-400", n: byLot.none.length }]
     .filter((x) => x.n > 0 || x.id !== "none");
 
   return (
@@ -489,6 +495,41 @@ function Segmented<T extends string>({ value, onChange, options }: {
 }
 
 /* ------------------------------------------------------------------ */
+
+/** Staff switches: mark a lot Full so the guest form sends guests to the front desk instead. */
+function LotSwitches() {
+  const { full, ready, available, setLotFull } = useLotsFull();
+  const toast = useToast();
+  if (ready && !available) return null; // update 10 not installed yet
+  return (
+    <section className="card p-5">
+      <SectionTitle icon={<Ban />} title="Lots open for guests"
+        sub="Turn a lot to Full and the guest check-in form tells guests to ask the front desk instead." />
+      <ul className="mt-4 space-y-1">
+        {LOTS.map((l) => {
+          const isFull = full.includes(l.id);
+          return (
+            <li key={l.id} className={`flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors ${isFull ? "bg-red-50" : ""}`}>
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-slate-800">{l.name}</span>
+                <span className={`block text-xs ${isFull ? "font-semibold text-red-600" : "text-slate-500"}`}>
+                  {isFull ? "Full: guests ask the front desk" : "Open"}
+                </span>
+              </span>
+              <Switch checked={isFull} tone="red" disabled={!ready}
+                onChange={async (v) => {
+                  const err = await setLotFull(l.id, v);
+                  if (err) toast(err, "error");
+                  else toast(v ? `${l.name} marked full for guests.` : `${l.name} is open again.`, v ? "warn" : "ok");
+                }} />
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 function UpcomingPanel({ upcoming, parked, now, onArrived }: {
   upcoming: ParkingRecord[];

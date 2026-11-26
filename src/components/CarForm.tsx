@@ -11,6 +11,7 @@ import { DatePicker } from "./ui/DatePicker";
 import { LotMapCard, type OtherPin, type Pin } from "./LotMap";
 import { LOTS, VEHICLES, lotById, lotFits, normalizeLot, recordLot, suggestLot, type LotId, type VehicleType } from "@/lib/lots";
 import { VehicleIcon } from "./ui/bits";
+import { useLotsFull } from "@/lib/useLotsFull";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
 import { isLotFullError, type ParkingRecord, type Source } from "@/lib/types";
@@ -63,6 +64,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullRetry, setFullRetry] = useState(false);
+  const { full: lotsFull } = useLotsFull();
   // once staff pick a lot by hand, changing the vehicle type no longer moves it
   const [lotTouched, setLotTouched] = useState(!!record);
   // which field the look-up drop-down is showing under (Add Car only)
@@ -374,6 +376,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
           <div className="mt-4 grid grid-cols-2 gap-3">
             {LOTS.map((l) => {
               const full = l.id === "lot1" && lotFull;
+              const flagged = lotsFull.includes(l.id);
               const free = l.id === "lot1" ? Math.max(0, LOT_CAPACITY - insideCount) : null;
               const wrongType = !lotFits(l.id, f.vehicle_type);
               return (
@@ -385,6 +388,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
                     {lot === l.id && <Check className="ml-auto h-4 w-4 text-brand-600" strokeWidth={3} />}
                   </span>
                   <span className={`text-xs font-semibold ${wrongType ? "text-amber-700" : "text-slate-600"}`}>{l.rule}</span>
+                  {flagged && <span className="chip mt-0.5 bg-red-50 text-red-700 ring-1 ring-inset ring-red-200">Full for guests</span>}
                   <span className="text-[11px] text-slate-400">
                     {full ? "Full" : free !== null ? `${free} spot${free === 1 ? "" : "s"} free` : l.id === "hotel" ? "Behind the hotel" : "No limit"}
                   </span>

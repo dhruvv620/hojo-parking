@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowRight, CalendarCheck, Car, CircleAlert, CircleCheck, Hash, LoaderCircle, MapPin, Phone, RectangleHorizontal,
-  SquareParking, UserRound,
+  SquareParking, TriangleAlert, UserRound,
 } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
@@ -13,7 +13,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { VehicleIcon } from "@/components/ui/bits";
 import { DirectionsButtons } from "@/components/DirectionsButtons";
 
-type Done = { ref: string; lot: LotId; checkout_at: string; name: string; plate: string; matched: boolean; already: boolean };
+type Done = { ref: string; lot: LotId | null; fullLot: LotId | null; checkout_at: string; name: string; plate: string; matched: boolean; already: boolean };
 
 const ymd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -26,6 +26,7 @@ export function CheckinForm() {
   const token = useSearchParams().get("k") ?? "";
   const [status, setStatus] = useState<"loading" | "invalid" | "ready">("loading");
   const [lot1Free, setLot1Free] = useState<number | null>(null);
+  const [lotsFull, setLotsFull] = useState<LotId[]>([]);
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
   const [f, setF] = useState({ name: "", phone: "", plate: "", state: "AZ", make: "", model: "", color: "", confirmation: "", website: "" });
   const [checkout, setCheckout] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; });
@@ -36,15 +37,17 @@ export function CheckinForm() {
 
   useEffect(() => {
     if (!token) { setStatus("invalid"); return; }
-    supabaseBrowser().rpc("guest_lot_info", { p_token: token }).then(({ data, error }: { data: { ok: boolean; lot1_available?: number } | null; error: unknown }) => {
+    supabaseBrowser().rpc("guest_lot_info", { p_token: token }).then(({ data, error }: { data: { ok: boolean; lot1_available?: number; lots_full?: LotId[] } | null; error: unknown }) => {
       if (error || !data?.ok) setStatus("invalid");
-      else { setLot1Free(data.lot1_available ?? null); setStatus("ready"); }
+      else { setLot1Free(data.lot1_available ?? null); setLotsFull(data.lots_full ?? []); setStatus("ready"); }
     });
   }, [token]);
 
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
   const days = daysFromToday(checkout);
   const lot = vehicle ? lotById(suggestLot(vehicle, lot1Free === 0)) : null;
+  // staff marked this lot Full: the guest asks the front desk instead
+  const lotIsFull = !!lot && lotsFull.includes(lot.id);
   const missing = {
     vehicle: !vehicle,
     name: f.name.trim().length < 2,
@@ -82,12 +85,12 @@ export function CheckinForm() {
       setError(niceError(error.message));
       return;
     }
-    const d = data as { ok: boolean; error?: string; ref: string; lot: LotId; checkout_at: string; matched_reservation: boolean; already?: boolean };
+    const d = data as { ok: boolean; error?: string; ref: string; lot: LotId | null; full_lot?: LotId | null; checkout_at: string; matched_reservation: boolean; already?: boolean };
     if (!d?.ok) {
       setError(d?.error ?? "Something went wrong. Please ask the front desk.");
       return;
     }
-    setDone({ ref: d.ref, lot: d.lot, checkout_at: d.checkout_at, name: f.name.trim(), plate: f.plate.trim().toUpperCase(), matched: d.matched_reservation, already: !!d.already });
+    setDone({ ref: d.ref, lot: d.lot, fullLot: d.full_lot ?? null, checkout_at: d.checkout_at, name: f.name.trim(), plate: f.plate.trim().toUpperCase(), matched: d.matched_reservation, already: !!d.already });
     window.scrollTo({ top: 0 });
   }
 
@@ -110,7 +113,8 @@ export function CheckinForm() {
   }
 
   if (done) {
-    const l = lotById(done.lot)!;
+    const l = lotById(done.lot);
+    const fl = lotById(done.fullLot);
     return (
       <Shell>
         <div className="card mt-6 animate-rise overflow-hidden">
@@ -122,6 +126,7 @@ export function CheckinForm() {
             <p className="mt-1 text-slate-600">Your car <b className="font-mono">{done.plate}</b> is registered.</p>
           </div>
           <div className="space-y-4 px-6 pb-6">
+            {l ? (
             <div className="rounded-2xl border-2 border-brand-200 bg-brand-50 p-4">
               <div className="text-xs font-bold uppercase tracking-wider text-brand-700">Please park in</div>
               <div className="mt-1 flex items-center gap-2">
@@ -133,8 +138,11 @@ export function CheckinForm() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={l.src} alt={`${l.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ aspectRatio: `${l.w} / ${l.h}`, maxHeight: 260 }} />
               )}
-              <div className="mt-3"><DirectionsButtons lot={done.lot} size="lg" /></div>
+              <div className="mt-3"><DirectionsButtons lot={l.id} size="lg" /></div>
             </div>
+            ) : (
+              <AskDesk lotName={fl?.name} big />
+            )}
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl bg-slate-50 p-3">
                 <dt className="text-xs text-slate-500">Checkout</dt>
@@ -176,7 +184,9 @@ export function CheckinForm() {
 
         {/* where to park */}
         <section className="card overflow-hidden">
-          {lot ? (
+          {lot && lotIsFull ? (
+            <div className="animate-rise border-b border-slate-100 p-4"><AskDesk lotName={lot.name} /></div>
+          ) : lot ? (
             <div className="animate-rise border-b border-slate-100 bg-gradient-to-b from-brand-50/80 to-white p-4">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
                 <MapPin className="h-3.5 w-3.5" /> Park here
@@ -207,7 +217,8 @@ export function CheckinForm() {
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
                   <b className="w-12 shrink-0">{l.name}</b>
                   <span className="flex-1 text-slate-600">{l.rule}</span>
-                  {lot?.id === l.id && <ArrowRight className="h-4 w-4 text-brand-600" />}
+                  {lotsFull.includes(l.id) && <span className="chip bg-red-100 text-red-700">Full</span>}
+                  {lot?.id === l.id && !lotsFull.includes(l.id) && <ArrowRight className="h-4 w-4 text-brand-600" />}
                 </li>
               ))}
             </ul>
@@ -331,6 +342,19 @@ function Input({ label, value, onChange, required, icon, type = "text", placehol
           className={`input ${icon ? "pl-9" : ""} ${mono ? "font-mono uppercase tracking-wide placeholder:font-sans placeholder:normal-case placeholder:tracking-normal" : ""} ${error ? "!border-red-400" : ""}`} />
       </div>
       {error && <p className="mt-1 text-xs font-medium text-red-600">{error}</p>}
+    </div>
+  );
+}
+
+/** "Lot X is full. Please check with the front desk where to park." */
+function AskDesk({ lotName, big }: { lotName?: string; big?: boolean }) {
+  return (
+    <div className={`rounded-2xl border-2 border-amber-300 bg-amber-50 ${big ? "p-5" : "p-4"}`}>
+      <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+        <TriangleAlert className="h-3.5 w-3.5" /> {lotName ? `${lotName} is full` : "Parking is full"}
+      </div>
+      <p className={`mt-1 font-bold text-slate-900 ${big ? "text-xl" : "text-lg"}`}>Please check with the front desk where to park.</p>
+      <p className="mt-1 text-sm text-slate-600">Please don&apos;t park yet. The front desk will tell you which lot to use.</p>
     </div>
   );
 }

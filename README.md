@@ -70,6 +70,7 @@ Open the link, log in with a user from step 3, and you're ready.
 - **Space opens up for a car parked outside:** press **Move inside** in the table.
 - **Lots:** **Lot 1** (fenced lot on E Melvin St) is for cars & SUVs and is the only lot that counts toward the 67. **Lot 2** (401 N 41st St) is for trucks. **Lot 3** (along E Melvin St, behind the hotel building) takes any vehicle. **Hotel Lot** is at the hotel (4120 E Van Buren St). When adding a car, pick Car / SUV / Truck and the app suggests the lot (trucks to Lot 2; cars & SUVs to Lot 1, or Lot 3 when Lot 1 is full). Staff can always change it.
 - **Directions for guests:** the check-in form and the "You're all set" screen have a **Directions to Lot X** button (Google Maps, or Apple Maps). Each lot's destination is the `nav` value in `src/lib/lots.ts`: either a Google Maps share link of the pinned lot (`{ link: "https://maps.app.goo.gl/..." }`) or an address (`{ address: "..." }`).
+- **Marking a lot full for guests:** on the dashboard, **Lots open for guests** has a switch per lot. Turn one on (red = Full) and guests who would be sent there are told "Lot X is full. Please check with the front desk where to park." instead of getting directions. Their car shows on the dashboard as **Needs a lot**; use **⋯ → Move to Lot …** to assign one. Staff can still choose a full lot themselves.
 - **Guest self check-in:** open **Guest QR** in the top menu, press **Print sign** and put it at the front desk. Guests scan it with their phone, pick Car / SUV / Truck, see where to park, fill in their details and submit. The car appears on the dashboard straight away (marked **Self check-in**). If the QR code is ever misused, press **Make new code** and print the new sign; the old one stops working.
 - **Mark where a car is parked (optional):** on Add Car or a car's page, use **Spot on the map** on the right: pick the lot tab, then tap where the car is. To change a lot's picture, replace its file in `public/maps/` (same framing) and update its width/height in `src/lib/lots.ts`.
 - **Find an old record:** **History** > search by name or plate. **Download CSV** gives a spreadsheet.
@@ -96,6 +97,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-7-sheet-backup.sql`: automatic backup to a Google Sheet.
 - `supabase/update-8-security.sql`: security hardening: only approved staff can see data, tamper-proof Stay history, guest form limits. See [SECURITY.md](SECURITY.md).
 - `supabase/update-9-history-paging.sql`: fast History paging and sorting by "Left" (the page works without it, but run it).
+- `supabase/update-10-lot-full-switches.sql`: the **Lots open for guests** switches on the dashboard.
 
 ## Changing the lot size
 

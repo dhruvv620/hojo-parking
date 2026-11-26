@@ -71,7 +71,7 @@ export function VehicleIcon({ type, className = "" }: { type: string | null | un
 /** Small coloured badge with the lot name. */
 export function LotChip({ lot }: { lot: string | null | undefined }) {
   const l = lotById(lot);
-  if (!l) return <span className="chip bg-slate-100 text-slate-500">No lot</span>;
+  if (!l) return <span className="chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">Needs a lot</span>;
   return (
     <span className={`chip ring-1 ring-inset ${l.chip}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${l.dot}`} /> {l.name}

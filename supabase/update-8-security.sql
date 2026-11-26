@@ -23,9 +23,12 @@ create table if not exists public.staff (
 );
 alter table public.staff enable row level security;
 
--- everyone who already has an account keeps working
+-- everyone who already has an account keeps working. Only done the very
+-- first time (empty staff list), so running this file again never approves
+-- accounts made since.
 insert into public.staff (user_id, email, added_by)
 select id, email, 'existing account' from auth.users
+where not exists (select 1 from public.staff)
 on conflict (user_id) do nothing;
 
 create or replace function public.is_staff()

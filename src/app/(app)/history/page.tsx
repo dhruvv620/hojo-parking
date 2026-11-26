@@ -9,6 +9,7 @@ import { lotName, recordLot, vehicleLabel } from "@/lib/lots";
 import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, History, LoaderCircle, Search, X } from "lucide-react";
 import { useToast } from "@/components/Toast";
 import { Select } from "@/components/ui/Dropdown";
+import { Switch } from "@/components/ui/Switch";
 import { SortHeader } from "@/components/ui/SortHeader";
 import { SORT_LABELS, loadSort, saveSort, type SortKey } from "@/lib/sort";
 
@@ -267,17 +268,6 @@ const STATUS = {
   cancelled: { text: "Cancelled", cls: "bg-red-50 text-red-700", dot: "bg-red-500" },
 };
 
-function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
-  return (
-    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
-      className="group flex items-center gap-2.5 rounded-lg py-1 text-sm font-medium text-slate-600 outline-none focus-visible:ring-4 focus-visible:ring-brand-200">
-      <span className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 ${checked ? "bg-brand-600" : "bg-slate-200 group-hover:bg-slate-300"}`}>
-        <span className={`h-5 w-5 rounded-full bg-white shadow-[0_1px_3px_rgb(16_24_40/0.25)] transition-transform duration-200 ease-out ${checked ? "translate-x-5" : "translate-x-0"}`} />
-      </span>
-      <span className="whitespace-nowrap">{label}</span>
-    </button>
-  );
-}
 
 /** "Showing 51–100 of 1,234", rows per page, and page buttons. */
 function Pager({ page, pages, first, last, total, pageSize, onPage, onPageSize }: {
