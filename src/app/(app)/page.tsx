@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRightLeft, ArrowUpDown, Ban, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
+  ArrowRightLeft, ArrowUpDown, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
   Pencil, Plus, Search, SquareParking, TriangleAlert, Undo2, X,
 } from "lucide-react";
 import { useParking } from "@/lib/useParking";
@@ -16,7 +16,6 @@ import { checkOutNow, markArrived, moveToLot } from "@/lib/actions";
 import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { useRun, useToast } from "@/components/Toast";
-import { Switch } from "@/components/ui/Switch";
 import { useLotsFull } from "@/lib/useLotsFull";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu, Portal, Select } from "@/components/ui/Dropdown";
@@ -108,11 +107,11 @@ export default function Dashboard() {
         </div>
 
         <aside className="space-y-6">
-          <LotSwitches />
           <UpcomingPanel upcoming={p.upcoming} parked={p.parked} now={p.now}
             onArrived={(r) => run(markArrived(r, p.isFull), `${r.guest_name} checked in.`)} />
           <LeavingToday cars={p.leavingToday} now={p.now} />
           <RecentlyLeft cars={p.recentlyLeft} onExtend={(r) => setStay({ r, add: 1 })} />
+          <LotSwitches />
         </aside>
       </div>
 
@@ -496,37 +495,36 @@ function Segmented<T extends string>({ value, onChange, options }: {
 
 /* ------------------------------------------------------------------ */
 
-/** Staff switches: mark a lot Full so the guest form sends guests to the front desk instead. */
+/** Small row of toggles: mark a lot Full so the guest form sends guests to the front desk instead. */
 function LotSwitches() {
   const { full, ready, available, setLotFull } = useLotsFull();
   const toast = useToast();
   if (ready && !available) return null; // update 10 not installed yet
   return (
-    <section className="card p-5">
-      <SectionTitle icon={<Ban />} title="Lots open for guests"
-        sub="Turn a lot to Full and the guest check-in form tells guests to ask the front desk instead." />
-      <ul className="mt-4 space-y-1">
+    <section className="card px-4 py-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold text-slate-500">Guest form: mark a lot full</span>
+        {full.length > 0 && <span className="text-[11px] font-semibold text-red-600">{full.length} full</span>}
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
         {LOTS.map((l) => {
           const isFull = full.includes(l.id);
           return (
-            <li key={l.id} className={`flex items-center gap-3 rounded-xl px-2.5 py-2 transition-colors ${isFull ? "bg-red-50" : ""}`}>
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-slate-800">{l.name}</span>
-                <span className={`block text-xs ${isFull ? "font-semibold text-red-600" : "text-slate-500"}`}>
-                  {isFull ? "Full: guests ask the front desk" : "Open"}
-                </span>
-              </span>
-              <Switch checked={isFull} tone="red" disabled={!ready}
-                onChange={async (v) => {
-                  const err = await setLotFull(l.id, v);
-                  if (err) toast(err, "error");
-                  else toast(v ? `${l.name} marked full for guests.` : `${l.name} is open again.`, v ? "warn" : "ok");
-                }} />
-            </li>
+            <button key={l.id} type="button" role="switch" aria-checked={isFull} disabled={!ready}
+              title={isFull ? `${l.name} is marked full: guests are told to ask the front desk. Click to open.` : `Click to mark ${l.name} full for guests.`}
+              onClick={async () => {
+                const err = await setLotFull(l.id, !isFull);
+                if (err) toast(err, "error");
+                else toast(!isFull ? `${l.name} marked full for guests.` : `${l.name} is open again.`, !isFull ? "warn" : "ok");
+              }}
+              className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
+                isFull ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${isFull ? "bg-red-500" : "bg-emerald-500"}`} />
+              {l.id === "hotel" ? "Hotel" : l.name}
+            </button>
           );
         })}
-      </ul>
+      </div>
     </section>
   );
 }
