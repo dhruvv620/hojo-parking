@@ -5,6 +5,7 @@ import {
   Check, CircleCheck, CircleDashed, CloudUpload, Copy, DatabaseBackup, ExternalLink, FileSpreadsheet,
   HardDriveDownload, LoaderCircle, Send, Unplug,
 } from "lucide-react";
+import { csvRow } from "@/lib/csv";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { backupScript } from "@/lib/backupScript";
 import { fmtDateTime } from "@/lib/time";
@@ -115,11 +116,11 @@ export default function BackupPage() {
     try {
       const cars = (await fetchAll("parking_records", "arrival_at")) as unknown as ParkingRecord[];
       const head = ["Guest", "Phone", "Room", "Confirmation #", "Booked", "Vehicle", "Plate", "State", "Car", "Lot", "Status", "Checked in", "Days", "Leaves by", "Checked out early", "Notes"];
-      const rows = cars.map((r) => [
+      const rows = cars.map((r) => csvRow([
         r.guest_name, r.phone, r.room_number, r.confirmation_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate,
         r.plate_state, carLabel(r), lotName(recordLot(r)), r.status, fmtDateTime(r.arrival_at), r.days, fmtDateTime(r.checkout_at),
         r.checked_out_at ? fmtDateTime(r.checked_out_at) : "", r.notes,
-      ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
+      ]));
       download(`parking-cars-${today}.csv`, [head.join(","), ...rows].join("\n"), "text/csv");
       toast(`Downloaded ${cars.length} cars.`);
     } catch (e) { toast((e as Error).message, "error"); }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, DatabaseBackup, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
+import { ChevronDown, DatabaseBackup, Users, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
 import { Menu } from "./ui/Dropdown";
@@ -78,6 +78,7 @@ export function Header() {
               </div>
             }
             items={[
+              { label: "Staff", icon: <Users />, onSelect: () => router.push("/staff") },
               { label: "Backup", icon: <DatabaseBackup />, onSelect: () => router.push("/backup") },
               { label: "Guest check-in QR", icon: <QrCode />, onSelect: () => router.push("/qr") },
               { label: "Sign out", icon: <LogOut />, onSelect: signOut, danger: true, divider: true },

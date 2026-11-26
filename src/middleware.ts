@@ -6,7 +6,7 @@ export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   // The guest check-in page is public (it only works with the secret code from the QR sign).
-  if (request.nextUrl.pathname.startsWith("/checkin")) return response;
+  if (request.nextUrl.pathname === "/checkin") return response;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

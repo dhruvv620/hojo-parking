@@ -95,9 +95,6 @@ export function updateStay(
 
 /** Mark a logged unpaid change as paid. */
 export async function markChangePaid(changeId: string): Promise<Result> {
-  const { error } = await supabaseBrowser()
-    .from("stay_changes")
-    .update({ payment: "paid", paid_marked_at: new Date().toISOString() })
-    .eq("id", changeId);
+  const { error } = await supabaseBrowser().rpc("mark_change_paid", { p_id: changeId });
   return error ? { ok: false, error: error.message } : { ok: true };
 }

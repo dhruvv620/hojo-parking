@@ -337,7 +337,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
             </div>
           </div>
           <div className="grid grid-cols-[1fr_84px] gap-2">
-            <Field label="Plate number" required value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} mono
+            <Field label="Plate number" required value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase().replace(/[^A-Z0-9 -]/g, "").slice(0, 12))} mono
               icon={<RectangleHorizontal />} placeholder="ABC 1234" {...lookupProps("license_plate")} />
             <Field label="State" value={f.plate_state} onChange={(v) => set("plate_state", v.toUpperCase().slice(0, 3))} placeholder="NJ" />
           </div>

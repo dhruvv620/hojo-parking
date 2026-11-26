@@ -164,7 +164,7 @@ drop policy if exists "staff can change settings" on public.app_settings;
 create policy "staff can read settings"   on public.app_settings for select to authenticated using (true);
 create policy "staff can change settings" on public.app_settings for update to authenticated using (true) with check (true);
 insert into public.app_settings (key, value)
-values ('checkin_token', substr(md5(random()::text || clock_timestamp()::text), 1, 16))
+values ('checkin_token', replace(gen_random_uuid()::text, '-', ''))
 on conflict (key) do nothing;
 
 -- 6. What the public check-in page may ask: is the code valid, and is Lot 1 full?

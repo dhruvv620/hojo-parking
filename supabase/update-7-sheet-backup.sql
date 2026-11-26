@@ -8,7 +8,7 @@ create extension if not exists pg_net;
 -- Where to send backups (set from the app's Backup page). Empty = backup off.
 insert into public.app_settings (key, value) values ('backup_url', '') on conflict (key) do nothing;
 insert into public.app_settings (key, value)
-values ('backup_key', substr(md5(random()::text || clock_timestamp()::text), 1, 24))
+values ('backup_key', replace(gen_random_uuid()::text, '-', ''))
 on conflict (key) do nothing;
 insert into public.app_settings (key, value) values ('backup_last_full', '') on conflict (key) do nothing;
 

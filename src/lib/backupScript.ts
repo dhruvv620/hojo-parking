@@ -76,7 +76,10 @@ function cell(field, v) {
     const d = new Date(v);
     if (!isNaN(d.getTime())) return Utilities.formatDate(d, TIME_ZONE, "yyyy-MM-dd HH:mm");
   }
-  return String(v);
+  let s = String(v);
+  // never let typed text act as a spreadsheet formula (e.g. =HYPERLINK(...))
+  if (/^[=+\\-@\\t\\r]/.test(s)) s = "'" + s;
+  return s;
 }
 
 function rowOf(cols, rec) {

@@ -9,12 +9,6 @@ import { LOTS } from "@/lib/lots";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
 
-function newToken() {
-  const bytes = new Uint8Array(8);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 /** Printable sign with the QR code guests scan to check themselves in. */
 export default function QrPage() {
   const toast = useToast();
@@ -35,7 +29,7 @@ export default function QrPage() {
 
   useEffect(() => {
     if (!url) return;
-    QRCode.toString(url, { type: "svg", margin: 0, errorCorrectionLevel: "M", color: { dark: "#0f172a", light: "#ffffff" } }).then(setSvg);
+    QRCode.toDataURL(url, { margin: 0, width: 640, errorCorrectionLevel: "M", color: { dark: "#0f172a", light: "#ffffff" } }).then(setSvg);
   }, [url]);
 
   async function rotate() {
@@ -46,10 +40,9 @@ export default function QrPage() {
       tone: "danger",
     });
     if (!ok) return;
-    const t = newToken();
-    const { error } = await supabaseBrowser().from("app_settings").update({ value: t, updated_at: new Date().toISOString() }).eq("key", "checkin_token");
+    const { data, error } = await supabaseBrowser().rpc("rotate_checkin_token");
     if (error) toast(error.message, "error");
-    else { setToken(t); toast("New QR code ready. Print it and replace the old sign."); }
+    else { setToken(data as string); toast("New QR code ready. Print it and replace the old sign."); }
   }
 
   return (
@@ -80,7 +73,10 @@ export default function QrPage() {
               <ScanLine className="h-5 w-5" /> Scan with your phone camera
             </p>
             <div className="mx-auto mt-6 w-64 max-w-full sm:w-72 [&>svg]:h-auto [&>svg]:w-full">
-              {svg ? <div className="[&>svg]:h-auto [&>svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} /> : <div className="skeleton aspect-square w-full" />}
+              {svg
+                // eslint-disable-next-line @next/next/no-img-element
+                ? <img src={svg} alt="QR code for guest parking check-in" className="h-auto w-full [image-rendering:pixelated]" />
+                : <div className="skeleton aspect-square w-full" />}
             </div>
             <ul className="mx-auto mt-8 max-w-sm space-y-2 text-left">
               {LOTS.filter((l) => l.id !== "hotel").map((l) => (

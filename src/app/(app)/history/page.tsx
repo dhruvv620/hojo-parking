@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { csvRow } from "@/lib/csv";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { carLabel, leftAt, liveStatus, sourceLabel, type ParkingRecord } from "@/lib/types";
 import { lotName, recordLot, vehicleLabel } from "@/lib/lots";
@@ -63,11 +64,11 @@ export default function HistoryPage() {
   function exportCsv() {
     const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Vehicle", "Plate", "State", "Make", "Model", "Color", "Lot", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
     const now = Date.now();
-    const lines = sorted.map((r) => [
+    const lines = sorted.map((r) => csvRow([
       r.guest_name, r.confirmation_number, r.phone, r.room_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate, r.plate_state,
       r.make, r.model, r.color, lotName(recordLot(r)), liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
       fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.notes,
-    ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
+    ]));
     const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

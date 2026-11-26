@@ -13,7 +13,7 @@ import { DatePicker } from "@/components/ui/DatePicker";
 import { VehicleIcon } from "@/components/ui/bits";
 import { DirectionsButtons } from "@/components/DirectionsButtons";
 
-type Done = { ref: string; lot: LotId; checkout_at: string; name: string; plate: string; matched: boolean };
+type Done = { ref: string; lot: LotId; checkout_at: string; name: string; plate: string; matched: boolean; already: boolean };
 
 const ymd = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -82,8 +82,12 @@ export function CheckinForm() {
       setError(niceError(error.message));
       return;
     }
-    const d = data as { ref: string; lot: LotId; checkout_at: string; matched_reservation: boolean };
-    setDone({ ref: d.ref, lot: d.lot, checkout_at: d.checkout_at, name: f.name.trim(), plate: f.plate.trim().toUpperCase(), matched: d.matched_reservation });
+    const d = data as { ok: boolean; error?: string; ref: string; lot: LotId; checkout_at: string; matched_reservation: boolean; already?: boolean };
+    if (!d?.ok) {
+      setError(d?.error ?? "Something went wrong. Please ask the front desk.");
+      return;
+    }
+    setDone({ ref: d.ref, lot: d.lot, checkout_at: d.checkout_at, name: f.name.trim(), plate: f.plate.trim().toUpperCase(), matched: d.matched_reservation, already: !!d.already });
     window.scrollTo({ top: 0 });
   }
 
@@ -142,6 +146,7 @@ export function CheckinForm() {
               </div>
             </dl>
             {done.matched && <p className="text-sm text-emerald-700">We found your online booking and linked it.</p>}
+            {done.already && <p className="text-sm text-emerald-700">This car was already checked in, so nothing new was added.</p>}
             <p className="text-center text-sm text-slate-500">Show this screen to the front desk if they ask.</p>
           </div>
         </div>
@@ -220,7 +225,7 @@ export function CheckinForm() {
         <Card n={3} title="Your car" missing={tried && (missing.plate || missing.make || missing.model)}>
           <div className="grid grid-cols-[1fr_88px] gap-2">
             <Input label="License plate" required icon={<RectangleHorizontal />} value={f.plate} mono
-              onChange={(v) => set("plate", v.toUpperCase())} autoComplete="off" placeholder="ABC 1234"
+              onChange={(v) => set("plate", v.toUpperCase().replace(/[^A-Z0-9 -]/g, "").slice(0, 12))} autoComplete="off" placeholder="ABC 1234"
               error={tried && missing.plate ? "Please enter your plate." : undefined} />
             <Input label="State" value={f.state} onChange={(v) => set("state", v.toUpperCase().slice(0, 3))} autoComplete="off" />
           </div>
