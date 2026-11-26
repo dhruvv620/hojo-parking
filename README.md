@@ -75,6 +75,14 @@ Open the link, log in with a user from step 3, and you're ready.
 
 Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it opens like an app.
 
+## Backup
+
+Open the account menu (top right) → **Backup**:
+
+- **Google Sheet backup:** follow the 5 steps on that page once. After that, every check-in, edit, extension and check-out is copied to your Google Sheet within seconds (tabs **Cars** and **Stay history**). Deleted cars stay in the sheet with a "Deleted at" time. **Send everything now** rewrites the sheet with a fresh full copy.
+- **Download a backup file:** **All cars (.csv)** opens in Excel; **Everything (.json)** includes the full Stay history. Save one on a computer or USB drive about once a month.
+- If the sheet is ever unreachable, the app keeps working normally; it just won't copy that change. Press **Send everything now** later to catch up.
+
 ## Updates
 
 If you set up the database before an update was released, run the matching file once in the Supabase SQL Editor:
@@ -84,6 +92,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-4-map-pin.sql`: adds the optional **Spot on the map** pin (run update 3 first).
 - `supabase/update-5-map-areas.sql`: lets the pin be on any of the three parking areas.
 - `supabase/update-6-lots-and-guest-form.sql`: Lot 1 / Lot 2 / Lot 3 / Hotel Lot, vehicle type, and the guest QR check-in form.
+- `supabase/update-7-sheet-backup.sql`: automatic backup to a Google Sheet.
 
 ## Changing the lot size
 

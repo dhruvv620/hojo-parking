@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
+import { ChevronDown, DatabaseBackup, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
 import { Menu } from "./ui/Dropdown";
@@ -77,7 +77,11 @@ export function Header() {
                 <div className="truncate text-sm font-semibold text-slate-900">{email ?? "..."}</div>
               </div>
             }
-            items={[{ label: "Sign out", icon: <LogOut />, onSelect: signOut, danger: true }]}
+            items={[
+              { label: "Backup", icon: <DatabaseBackup />, onSelect: () => router.push("/backup") },
+              { label: "Guest check-in QR", icon: <QrCode />, onSelect: () => router.push("/qr") },
+              { label: "Sign out", icon: <LogOut />, onSelect: signOut, danger: true, divider: true },
+            ]}
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-bold text-white">
               {initial}
