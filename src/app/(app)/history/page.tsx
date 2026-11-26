@@ -1,12 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { carLabel, leftAt, liveStatus, sourceLabel, type ParkingRecord } from "@/lib/types";
 import { lotName, recordLot, vehicleLabel } from "@/lib/lots";
-import { CalendarDays, Download, History, LoaderCircle, Search, X } from "lucide-react";
+import { ArrowUpDown, CalendarDays, Download, History, LoaderCircle, Search, X } from "lucide-react";
 import { Select } from "@/components/ui/Dropdown";
+import { SortHeader } from "@/components/ui/SortHeader";
+import { SORT_LABELS, loadSort, saveSort, sortRecords, type SortKey } from "@/lib/sort";
+
+const HISTORY_SORTS: SortKey[] = ["checkin_desc", "checkin_asc", "left_desc", "name_asc", "name_desc", "lot"];
 import { Avatar, EmptyState, LotChip, Plate } from "@/components/ui/bits";
 import { DAY, fmtDateTime } from "@/lib/time";
 
@@ -22,6 +26,10 @@ export default function HistoryPage() {
   const [q, setQ] = useState("");
   const [range, setRange] = useState(30);
   const [showAll, setShowAll] = useState(false);
+  const [sort, setSortState] = useState<SortKey>("checkin_desc");
+  useEffect(() => { setSortState(loadSort("hojo.history.sort", "checkin_desc", HISTORY_SORTS)); }, []);
+  const setSort = (k: SortKey) => { setSortState(k); saveSort("hojo.history.sort", k); };
+  const sorted = useMemo(() => sortRecords(rows, sort), [rows, sort]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -55,7 +63,7 @@ export default function HistoryPage() {
   function exportCsv() {
     const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Vehicle", "Plate", "State", "Make", "Model", "Color", "Lot", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
     const now = Date.now();
-    const lines = rows.map((r) => [
+    const lines = sorted.map((r) => [
       r.guest_name, r.confirmation_number, r.phone, r.room_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate, r.plate_state,
       r.make, r.model, r.color, lotName(recordLot(r)), liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
       fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.notes,
@@ -96,6 +104,8 @@ export default function HistoryPage() {
         </div>
         <Select value={range} onChange={setRange} icon={<CalendarDays className="h-4 w-4" />} className="w-48" ariaLabel="Date range"
           options={RANGES.map((r) => ({ value: r.days, label: r.label, description: r.description }))} />
+        <Select value={sort} onChange={setSort} icon={<ArrowUpDown className="h-4 w-4" />} className="w-60" ariaLabel="Sort"
+          options={HISTORY_SORTS.map((k) => ({ value: k, ...SORT_LABELS[k] }))} />
         <Switch checked={showAll} onChange={setShowAll} label="Include cars still here" />
         <span className="ml-auto text-sm tabular-nums text-slate-500">
           {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : `${rows.length} record${rows.length === 1 ? "" : "s"}`}
@@ -107,11 +117,11 @@ export default function HistoryPage() {
           <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-slate-50/95 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>
-                <th className="px-5 py-3">Guest</th>
+                <SortHeader className="px-5 py-3" label="Guest" sort={sort} onSort={setSort} first="name_asc" second="name_desc" />
                 <th className="px-3 py-3">Car</th>
-                <th className="px-3 py-3">Lot</th>
-                <th className="px-3 py-3">Arrived</th>
-                <th className="px-3 py-3">Left</th>
+                <SortHeader className="px-3 py-3" label="Lot" sort={sort} onSort={setSort} first="lot" />
+                <SortHeader className="px-3 py-3" label="Checked in" sort={sort} onSort={setSort} first="checkin_desc" second="checkin_asc" />
+                <SortHeader className="px-3 py-3" label="Left" sort={sort} onSort={setSort} first="left_desc" />
                 <th className="px-5 py-3">Status</th>
               </tr>
             </thead>
@@ -122,7 +132,7 @@ export default function HistoryPage() {
                     <td colSpan={6} className="px-5 py-3"><div className="skeleton h-9" /></td>
                   </tr>
                 ))}
-              {rows.map((r) => {
+              {sorted.map((r) => {
                 const s = liveStatus(r, now);
                 const st = STATUS[s];
                 return (

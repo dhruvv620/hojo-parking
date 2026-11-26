@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowRightLeft, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
+  ArrowRightLeft, ArrowUpDown, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
   Pencil, Plus, Search, SquareParking, TriangleAlert, Undo2, X,
 } from "lucide-react";
 import { useParking } from "@/lib/useParking";
@@ -17,7 +17,11 @@ import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { useRun, useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
-import { Menu } from "@/components/ui/Dropdown";
+import { Menu, Select } from "@/components/ui/Dropdown";
+import { SortHeader } from "@/components/ui/SortHeader";
+import { SORT_LABELS, loadSort, saveSort, sortRecords, type SortKey } from "@/lib/sort";
+
+const DASH_SORTS: SortKey[] = ["checkin_desc", "checkin_asc", "leaves_asc", "leaves_desc", "name_asc", "name_desc", "lot"];
 import { Avatar, EmptyState, LotChip, Plate, SectionTitle, VehicleIcon } from "@/components/ui/bits";
 
 export default function Dashboard() {
@@ -307,6 +311,9 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
   const router = useRouter();
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"all" | LotId>("all");
+  const [sort, setSortState] = useState<SortKey>("leaves_asc");
+  useEffect(() => { setSortState(loadSort("hojo.dash.sort", "leaves_asc", DASH_SORTS)); }, []);
+  const setSort = (k: SortKey) => { setSortState(k); saveSort("hojo.dash.sort", k); };
 
   const rows = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -316,9 +323,9 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
         !s ||
         [r.guest_name, r.license_plate, r.confirmation_number, r.make, r.model, r.color, r.room_number, r.phone]
           .some((v) => v?.toLowerCase().includes(s)),
-      )
-      .sort((a, b) => a.checkout_at.localeCompare(b.checkout_at));
+      );
   }, [parked, q, tab]);
+  const sorted = useMemo(() => sortRecords(rows, sort), [rows, sort]);
 
   const count = (l: LotId) => parked.filter((r) => recordLot(r) === l).length;
 
@@ -332,7 +339,11 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
             { value: "all", label: "All", count: parked.length },
             ...LOTS.map((l) => ({ value: l.id, label: l.id === "hotel" ? "Hotel" : l.name, count: count(l.id) })),
           ]} />
-        <div className="relative ml-auto w-full sm:w-72">
+        <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row">
+        <Select value={sort} onChange={setSort} ariaLabel="Sort cars" icon={<ArrowUpDown className="h-4 w-4" />}
+          className="h-10 w-full shrink-0 text-sm sm:w-auto"
+          options={DASH_SORTS.map((k) => ({ value: k, ...SORT_LABELS[k] }))} />
+        <div className="relative min-w-0 flex-1 sm:w-60">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input className="input h-10 pl-9 pr-9 text-sm" placeholder="Search name, plate, conf #..."
             value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search cars" />
@@ -343,6 +354,7 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
             </button>
           )}
         </div>
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -352,18 +364,19 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
           action={parked.length === 0 ? <Link href="/cars/new" className="btn-primary"><Plus /> Add a car</Link> : undefined} />
       ) : (
         <div className="max-h-[640px] overflow-auto border-t border-slate-100">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="w-full min-w-[740px] text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50/95 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">
               <tr>
-                <th className="px-5 py-3">Guest</th>
-                <th className="px-3 py-3">Car</th>
-                <th className="px-3 py-3">Where</th>
-                <th className="px-3 py-3">Leaves</th>
-                <th className="px-5 py-3 text-right"><span className="sr-only">Actions</span></th>
+                <SortHeader className="py-3 pl-5 pr-3" label="Guest" sort={sort} onSort={setSort} first="name_asc" second="name_desc" />
+                <th className="px-2.5 py-3">Car</th>
+                <SortHeader className="px-2.5 py-3" label="Lot" sort={sort} onSort={setSort} first="lot" />
+                <SortHeader className="px-2.5 py-3" label="Checked in" sort={sort} onSort={setSort} first="checkin_desc" second="checkin_asc" />
+                <SortHeader className="px-2.5 py-3" label="Leaves" sort={sort} onSort={setSort} first="leaves_asc" second="leaves_desc" />
+                <th className="py-3 pl-2 pr-4 text-right"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((r) => {
+              {sorted.map((r) => {
                 const left = new Date(r.checkout_at).getTime() - now;
                 const soon = left < 6 * 3600_000;
                 return (
@@ -380,27 +393,31 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
                         </span>
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3">
+                    <td className="whitespace-nowrap px-2.5 py-3">
                       <Plate plate={r.license_plate} state={r.plate_state} />
                       <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                         {r.vehicle_type && <VehicleIcon type={r.vehicle_type} className="h-3.5 w-3.5 text-slate-400" />}
                         {carLabel(r)}
                       </div>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-2.5 py-3">
                       <LotChip lot={recordLot(r)} />
                       {!lotFits(recordLot(r), r.vehicle_type) && <div className="mt-1 text-[11px] font-semibold text-amber-600">Wrong lot for {vehicleLabel(r.vehicle_type)}</div>}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3">
+                    <td className="whitespace-nowrap px-2.5 py-3">
+                      <div className="font-medium text-slate-800">{fmtDateTime(r.arrival_at)}</div>
+                      <span className="mt-1 text-xs text-slate-500">{fmtDuration(now - new Date(r.arrival_at).getTime())} ago</span>
+                    </td>
+                    <td className="whitespace-nowrap px-2.5 py-3">
                       <div className="font-medium text-slate-800">{fmtDateTime(r.checkout_at)}</div>
                       <span className={`mt-1 inline-flex items-center gap-1 text-xs ${soon ? "font-semibold text-amber-600" : "text-slate-500"}`}>
                         <Clock className="h-3 w-3" /> in {fmtDuration(left)} · {r.days} day{r.days > 1 ? "s" : ""}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button className="btn-secondary btn-sm" onClick={() => onCheckOut(r)}>
-                          <LogOut /> Check out
+                    <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button className="btn-secondary btn-sm" onClick={() => onCheckOut(r)} title="Check out" aria-label={`Check out ${r.guest_name}`}>
+                          <LogOut /> <span className="hidden 2xl:inline">Check out</span>
                         </button>
                         <Menu items={[
                           { label: "Edit details", icon: <Pencil />, onSelect: () => router.push(`/cars/${r.id}`) },
@@ -430,12 +447,12 @@ function Segmented<T extends string>({ value, onChange, options }: {
   value: T; onChange: (v: T) => void; options: { value: T; label: string; count: number }[];
 }) {
   return (
-    <div role="tablist" className="flex rounded-xl bg-slate-100 p-1">
+    <div role="tablist" className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 [scrollbar-width:none]">
       {options.map((o) => {
         const active = o.value === value;
         return (
           <button key={o.value} role="tab" aria-selected={active} onClick={() => onChange(o.value)}
-            className={`flex h-8 items-center gap-1.5 rounded-lg px-3 text-sm font-semibold transition-all duration-200 ${
+            className={`flex h-8 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-all duration-200 ${
               active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"
             }`}>
             {o.label}
