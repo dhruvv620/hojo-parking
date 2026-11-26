@@ -24,28 +24,33 @@ export const LOTS: {
   src: string | null;
   w: number;
   h: number;
+  /**
+   * Where "Get directions" sends guests: "latitude,longitude" of the lot
+   * entrance (most accurate) or a street address. null = the hotel's address.
+   */
+  nav: string | null;
   /** Tailwind colour family used for chips and bars. */
   dot: string;
   chip: string;
 }[] = [
   {
     id: "lot1", name: "Lot 1", place: "Fenced lot, 402/406 E Melvin St", rule: "Cars & SUVs only",
-    allowed: ["car", "suv"], capacity: LOT_CAPACITY, src: "/maps/fenced-lot.webp", w: 1046, h: 1312,
+    allowed: ["car", "suv"], capacity: LOT_CAPACITY, src: "/maps/fenced-lot.webp", w: 1046, h: 1312, nav: null,
     dot: "bg-brand-500", chip: "bg-brand-50 text-brand-700 ring-brand-100",
   },
   {
     id: "lot2", name: "Lot 2", place: "401 E Melvin St (N 41st St corner)", rule: "Trucks only",
-    allowed: ["truck"], capacity: null, src: "/maps/lot-401.webp", w: 784, h: 710,
+    allowed: ["truck"], capacity: null, src: "/maps/lot-401.webp", w: 784, h: 710, nav: null,
     dot: "bg-orange-500", chip: "bg-orange-50 text-orange-700 ring-orange-100",
   },
   {
     id: "lot3", name: "Lot 3", place: "Along E Melvin St, behind the hotel building", rule: "Any vehicle",
-    allowed: ["car", "suv", "truck"], capacity: null, src: "/maps/lot-3.webp", w: 1676, h: 848,
+    allowed: ["car", "suv", "truck"], capacity: null, src: "/maps/lot-3.webp", w: 1676, h: 848, nav: null,
     dot: "bg-teal-500", chip: "bg-teal-50 text-teal-700 ring-teal-100",
   },
   {
     id: "hotel", name: "Hotel Lot", place: "Behind the hotel, 4120 E Van Buren St", rule: "Ask the front desk",
-    allowed: ["car", "suv", "truck"], capacity: null, src: "/maps/hotel-lot.webp", w: 852, h: 1222,
+    allowed: ["car", "suv", "truck"], capacity: null, src: "/maps/hotel-lot.webp", w: 852, h: 1222, nav: null,
     dot: "bg-violet-500", chip: "bg-violet-50 text-violet-700 ring-violet-100",
   },
 ];
@@ -79,3 +84,17 @@ export function suggestLot(vehicle: VehicleType | null | undefined, lot1Full: bo
 }
 
 export const vehicleLabel = (v: string | null | undefined) => VEHICLES.find((x) => x.id === v)?.label ?? null;
+
+/** Used when a lot has no exact location yet. */
+export const HOTEL_ADDRESS = "Howard Johnson, 4120 E Van Buren St, Phoenix, AZ 85008";
+
+/** Driving directions links for a lot (Google Maps works on every phone; Apple Maps for iPhones). */
+export function directionsLinks(id: LotId) {
+  const dest = lotById(id)?.nav ?? HOTEL_ADDRESS;
+  const q = encodeURIComponent(dest);
+  return {
+    google: `https://www.google.com/maps/dir/?api=1&destination=${q}&travelmode=driving`,
+    apple: `https://maps.apple.com/?daddr=${q}&dirflg=d`,
+    exact: !!lotById(id)?.nav,
+  };
+}

@@ -11,6 +11,7 @@ import { HOTEL_NAME } from "@/lib/config";
 import { LOTS, VEHICLES, lotById, suggestLot, type LotId, type VehicleType } from "@/lib/lots";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { VehicleIcon } from "@/components/ui/bits";
+import { DirectionsButtons } from "@/components/DirectionsButtons";
 
 type Done = { ref: string; lot: LotId; checkout_at: string; name: string; plate: string; matched: boolean };
 
@@ -128,6 +129,7 @@ export function CheckinForm() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={l.src} alt={`${l.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ aspectRatio: `${l.w} / ${l.h}`, maxHeight: 260 }} />
               )}
+              <div className="mt-3"><DirectionsButtons lot={done.lot} size="lg" /></div>
             </div>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl bg-slate-50 p-3">
@@ -187,6 +189,7 @@ export function CheckinForm() {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={lot.src} alt={`${lot.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ maxHeight: 220 }} />
               )}
+              <div className="mt-3"><DirectionsButtons lot={lot.id} /></div>
             </div>
           ) : null}
           <div className="p-4">
