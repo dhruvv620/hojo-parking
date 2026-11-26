@@ -137,8 +137,8 @@ export function CheckinForm() {
             </div>
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl bg-slate-50 p-3">
-                <dt className="text-xs text-slate-500">Leaves by</dt>
-                <dd className="font-semibold">{new Date(done.checkout_at).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</dd>
+                <dt className="text-xs text-slate-500">Checkout</dt>
+                <dd className="font-semibold">{new Date(done.checkout_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</dd>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
                 <dt className="text-xs text-slate-500">Reference</dt>
@@ -254,7 +254,6 @@ export function CheckinForm() {
                   <span className="text-xs font-semibold text-slate-500">{days} day{days === 1 ? "" : "s"}</span>
                 </>
               )} />
-            <p className="mt-1.5 text-xs text-slate-500">Parking starts now and lasts {days} x 24 hours.</p>
           </div>
           <Input label="Booked online? Confirmation #" icon={<Hash />} value={f.confirmation} mono
             onChange={(v) => set("confirmation", v)} autoComplete="off" placeholder="Optional" />
