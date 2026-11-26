@@ -5,6 +5,7 @@ import { supabaseBrowser } from "./supabase/client";
 import { liveStatus, type ParkingRecord } from "./types";
 import { DAY, sameDay } from "./time";
 import { LOT_CAPACITY } from "./config";
+import { recordLot, type LotId } from "./lots";
 
 /** Re-renders every 30 seconds so cars check out on time with nobody touching anything. */
 export function useNow(intervalMs = 30_000) {
@@ -71,8 +72,10 @@ export function useParking() {
       else if (s === "upcoming") upcoming.push(r);
       else if (s === "auto_out" || s === "checked_out") recentlyLeft.push(r);
     }
-    const inside = parked.filter((r) => r.location === "inside");
+    const inside = parked.filter((r) => r.location === "inside"); // = Lot 1, counts toward the limit
     const outside = parked.filter((r) => r.location === "outside");
+    const byLot: Record<LotId | "none", ParkingRecord[]> = { lot1: [], lot2: [], lot3: [], hotel: [], none: [] };
+    for (const r of parked) byLot[recordLot(r) ?? "none"].push(r);
     const leavingToday = parked
       .filter((r) => sameDay(r.checkout_at, new Date(now)))
       .sort((a, b) => a.checkout_at.localeCompare(b.checkout_at));
@@ -85,6 +88,7 @@ export function useParking() {
       parked,
       inside,
       outside,
+      byLot,
       upcoming,
       recentlyLeft,
       leavingToday,

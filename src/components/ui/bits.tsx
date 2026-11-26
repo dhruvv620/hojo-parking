@@ -1,3 +1,6 @@
+import { Car, CarFront, Truck } from "lucide-react";
+import { lotById } from "@/lib/lots";
+
 const TONES = {
   brand: "bg-brand-50 text-brand-700 ring-brand-100",
   violet: "bg-violet-50 text-violet-700 ring-violet-100",
@@ -55,5 +58,23 @@ export function EmptyState({ icon, title, text, action, compact }: {
       {text && <p className="mt-1 text-sm text-slate-500">{text}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
+  );
+}
+
+/** Icon for Car / SUV / Truck. */
+export function VehicleIcon({ type, className = "" }: { type: string | null | undefined; className?: string }) {
+  if (type === "truck") return <Truck className={className} />;
+  if (type === "suv") return <CarFront className={className} />;
+  return <Car className={className} />;
+}
+
+/** Small coloured badge with the lot name. */
+export function LotChip({ lot }: { lot: string | null | undefined }) {
+  const l = lotById(lot);
+  if (!l) return <span className="chip bg-slate-100 text-slate-500">No lot</span>;
+  return (
+    <span className={`chip ring-1 ring-inset ${l.chip}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${l.dot}`} /> {l.name}
+    </span>
   );
 }

@@ -5,6 +5,9 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // The guest check-in page is public (it only works with the secret code from the QR sign).
+  if (request.nextUrl.pathname.startsWith("/checkin")) return response;
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -42,5 +45,6 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|.*\\.(?:png|jpg|svg|ico)$).*)"],
+  // Skip the login check for static files and the lot pictures (guests need to see them).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|maps/|.*\\.(?:png|jpg|jpeg|webp|svg|ico)$).*)"],
 };

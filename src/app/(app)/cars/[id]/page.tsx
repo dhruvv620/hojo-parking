@@ -11,7 +11,8 @@ import { carLabel, liveStatus, pinsOf, type LiveStatus, type ParkingRecord } fro
 import { fmtDateTime, fmtDuration } from "@/lib/time";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu } from "@/components/ui/Dropdown";
-import { Avatar, EmptyState, Plate } from "@/components/ui/bits";
+import { Avatar, EmptyState, LotChip, Plate, VehicleIcon } from "@/components/ui/bits";
+import { recordLot } from "@/lib/lots";
 import { StayHistory } from "@/components/StayHistory";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { ArrowLeft, CalendarRange, CalendarX2, Clock, Ellipsis, LogIn, LogOut, SearchX, Trash2, Undo2 } from "lucide-react";
@@ -110,7 +111,12 @@ export default function EditCarPage() {
             </div>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500">
               <Plate plate={record.license_plate} state={record.plate_state} />
-              <span>{carLabel(record)}</span>
+              <span className="flex items-center gap-1">
+                {record.vehicle_type && <VehicleIcon type={record.vehicle_type} className="h-4 w-4 text-slate-400" />}
+                {carLabel(record)}
+              </span>
+              {record.status !== "reserved" && <LotChip lot={recordLot(record)} />}
+              {record.source === "guest_form" && <span className="chip bg-slate-100 text-slate-600">Self check-in</span>}
               {record.confirmation_number && <span className="font-mono text-xs">#{record.confirmation_number}</span>}
               {unpaid > 0 && (
                 <span className="chip bg-amber-100 text-amber-800 ring-1 ring-inset ring-amber-200">

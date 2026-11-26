@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRightLeft, CalendarClock, CalendarRange, CalendarDays, CarFront, CircleCheck, Clock, Ellipsis, LogIn, LogOut,
@@ -9,20 +9,38 @@ import {
 } from "lucide-react";
 import { useParking } from "@/lib/useParking";
 import { LOT_CAPACITY } from "@/lib/config";
-import { carLabel, type ParkingRecord } from "@/lib/types";
+import { carLabel, sourceLabel, type ParkingRecord } from "@/lib/types";
+import { lotFits, vehicleLabel } from "@/lib/lots";
 import { DAY, fmtDateTime, fmtDay, fmtDuration, fmtTime, sameDay, startOfDay } from "@/lib/time";
-import { checkOutNow, markArrived, moveTo } from "@/lib/actions";
+import { checkOutNow, markArrived, moveToLot } from "@/lib/actions";
+import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
-import { useRun } from "@/components/Toast";
+import { useRun, useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Menu } from "@/components/ui/Dropdown";
-import { Avatar, EmptyState, Plate, SectionTitle } from "@/components/ui/bits";
+import { Avatar, EmptyState, LotChip, Plate, SectionTitle, VehicleIcon } from "@/components/ui/bits";
 
 export default function Dashboard() {
   const p = useParking();
   const runAction = useRun();
   const confirm = useConfirm();
   const [stay, setStay] = useState<{ r: ParkingRecord; add: number } | null>(null);
+  const toast = useToast();
+
+  // Pop up a notice when a guest checks themselves in with the QR form.
+  const seen = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    if (p.loading) return;
+    const ids = new Set(p.records.map((r) => r.id));
+    if (seen.current) {
+      for (const r of p.records) {
+        if (!seen.current.has(r.id) && r.source === "guest_form") {
+          toast(`New self check-in: ${r.guest_name} (${r.license_plate}) → ${lotName(recordLot(r))}`);
+        }
+      }
+    }
+    seen.current = ids;
+  }, [p.records, p.loading, toast]);
   // refresh right away after any button, without waiting for the live update
   const run: typeof runAction = async (action, msg) => {
     const ok = await runAction(action, msg);
@@ -60,15 +78,15 @@ export default function Dashboard() {
             <TriangleAlert className="h-5 w-5" />
           </span>
           <div>
-            <div className="text-xl font-extrabold tracking-wide">LOT FULL</div>
+            <div className="text-xl font-extrabold tracking-wide">LOT 1 FULL</div>
             <div className="text-sm text-red-100">
-              All {LOT_CAPACITY} inside spots are taken. New cars will be logged as parking outside the fence.
+              All {LOT_CAPACITY} spots in Lot 1 are taken. Cars and SUVs go to Lot 3.
             </div>
           </div>
         </div>
       )}
 
-      <Overview inside={p.inside.length} available={p.available} outside={p.outside.length} arrivingToday={arrivingToday} />
+      <Overview byLot={p.byLot} total={p.parked.length} available={p.available} arrivingToday={arrivingToday} />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-6">
@@ -76,7 +94,7 @@ export default function Dashboard() {
           <ParkedTable parked={p.parked} now={p.now} lotFull={p.isFull}
             onCheckOut={checkOut}
             onUpdateStay={(r) => setStay({ r, add: 0 })}
-            onMove={(r, loc) => run(moveTo(r, loc), loc === "inside" ? "Moved inside the fence." : "Moved outside the fence.")}
+            onMove={(r, lot) => run(moveToLot(r, lot), `Moved to ${lotName(lot)}.`)}
           />
         </div>
 
@@ -117,20 +135,21 @@ function PageHeader({ now }: { now: number }) {
   );
 }
 
-function Overview({ inside, available, outside, arrivingToday }: {
-  inside: number; available: number; outside: number; arrivingToday: number;
+function Overview({ byLot, total, available, arrivingToday }: {
+  byLot: Record<LotId | "none", ParkingRecord[]>; total: number; available: number; arrivingToday: number;
 }) {
-  const total = inside + outside;
-  const pct = Math.min(100, Math.round((inside / LOT_CAPACITY) * 100));
+  const lot1 = byLot.lot1.length;
+  const pct = Math.min(100, Math.round((lot1 / LOT_CAPACITY) * 100));
   const tone = pct >= 100 ? "#dc2626" : pct >= 85 ? "#f59e0b" : "#10b981";
   const full = available === 0;
   const r = 44;
   const c = 2 * Math.PI * r;
-  const insideShare = total ? (inside / total) * 100 : 0;
+  const parts = [...LOTS.map((l) => ({ id: l.id, name: l.name, dot: l.dot, n: byLot[l.id].length })), { id: "none", name: "No lot", dot: "bg-slate-300", n: byLot.none.length }]
+    .filter((x) => x.n > 0 || x.id !== "none");
 
   return (
-    <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1.45fr_0.8fr_0.8fr]">
-      {/* 1. Total parked, split inside / outside */}
+    <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1.15fr_1.45fr_1fr_0.75fr]">
+      {/* 1. Total parked, split by lot */}
       <div className="card col-span-2 flex flex-col p-5 lg:col-span-1">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><CarFront className="h-5 w-5" /></span>
@@ -138,22 +157,22 @@ function Overview({ inside, available, outside, arrivingToday }: {
         </div>
         <div className="mt-3 text-4xl font-extrabold tabular-nums tracking-tight">{total}</div>
         <div className="mt-auto pt-4">
-          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
-            <div className="h-full bg-brand-500 transition-all duration-700" style={{ width: `${insideShare}%` }} />
-            <div className="h-full bg-sky-400 transition-all duration-700" style={{ width: `${total ? 100 - insideShare : 0}%` }} />
+          <div className="flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
+            {parts.map((x) => (
+              <div key={x.id} className={`h-full transition-all duration-700 ${x.dot}`} style={{ width: `${total ? (x.n / total) * 100 : 0}%` }} />
+            ))}
           </div>
-          <div className="mt-2 flex justify-between gap-2 text-xs">
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-brand-500" /> <b className="tabular-nums text-slate-900">{inside}</b> inside fence
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-600">
-              <span className="h-2 w-2 rounded-full bg-sky-400" /> <b className="tabular-nums text-slate-900">{outside}</b> outside
-            </span>
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-600">
+            {parts.map((x) => (
+              <span key={x.id} className="flex items-center gap-1.5">
+                <span className={`h-2 w-2 rounded-full ${x.dot}`} /> {x.name} <b className="tabular-nums text-slate-900">{x.n}</b>
+              </span>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* 2. Inside the fence: gauge + spots available */}
+      {/* 2. Lot 1 (fenced): gauge + spots available */}
       <div className="card col-span-2 flex items-center gap-5 p-5 lg:col-span-1">
         <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
@@ -168,9 +187,9 @@ function Overview({ inside, available, outside, arrivingToday }: {
           </div>
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium text-slate-500">Inside the fence</div>
+          <div className="text-sm font-medium text-slate-500">Lot 1 · fenced lot</div>
           <div className="mt-0.5 text-4xl font-extrabold tabular-nums tracking-tight">
-            {inside}<span className="ml-1 text-xl font-bold text-slate-300">/ {LOT_CAPACITY}</span>
+            {lot1}<span className="ml-1 text-xl font-bold text-slate-300">/ {LOT_CAPACITY}</span>
           </div>
           <div className={`mt-2.5 inline-flex items-center gap-2 rounded-xl px-3 py-1.5 ${
             full ? "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200" : "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"}`}>
@@ -182,9 +201,23 @@ function Overview({ inside, available, outside, arrivingToday }: {
         </div>
       </div>
 
-      {/* 3. Outside the fence */}
-      <StatTile icon={<ArrowRightLeft />} label="Outside the fence" value={outside}
-        color="text-sky-700" badge="bg-sky-50 text-sky-600" note="Doesn't count toward 67" />
+      {/* 3. Other lots */}
+      <div className="card p-4 sm:p-5">
+        <div className="text-xs font-medium text-slate-500 sm:text-sm">Other lots</div>
+        <ul className="mt-2 space-y-2">
+          {LOTS.filter((l) => l.id !== "lot1").map((l) => (
+            <li key={l.id} className="flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold text-slate-800">{l.name}</span>
+                <span className="block truncate text-[11px] text-slate-400">{l.rule}</span>
+              </span>
+              <span className="text-xl font-extrabold tabular-nums">{byLot[l.id].length}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* 4. Arriving today */}
       <StatTile icon={<CalendarClock />} label="Arriving today" value={arrivingToday}
         color="text-violet-700" badge="bg-violet-50 text-violet-600" note="Reservations due" />
@@ -214,7 +247,7 @@ function LotGrid({ inside, now }: { inside: ParkingRecord[]; now: number }) {
   return (
     <section className="card overflow-x-clip p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <SectionTitle icon={<SquareParking />} title="Lot map" sub={`${inside.length} parked · ${LOT_CAPACITY - Math.min(inside.length, LOT_CAPACITY)} empty`} />
+        <SectionTitle icon={<SquareParking />} title="Lot 1 spots" sub={`${inside.length} parked · ${LOT_CAPACITY - Math.min(inside.length, LOT_CAPACITY)} empty`} />
         <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600">
           <Legend className="bg-brand-600" text="Parked" />
           <Legend className="bg-amber-500" text="Leaving today" />
@@ -269,16 +302,16 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
   lotFull: boolean;
   onCheckOut: (r: ParkingRecord) => void;
   onUpdateStay: (r: ParkingRecord) => void;
-  onMove: (r: ParkingRecord, loc: "inside" | "outside") => void;
+  onMove: (r: ParkingRecord, lot: LotId) => void;
 }) {
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState<"all" | "inside" | "outside">("all");
+  const [tab, setTab] = useState<"all" | LotId>("all");
 
   const rows = useMemo(() => {
     const s = q.trim().toLowerCase();
     return parked
-      .filter((r) => tab === "all" || r.location === tab)
+      .filter((r) => tab === "all" || recordLot(r) === tab)
       .filter((r) =>
         !s ||
         [r.guest_name, r.license_plate, r.confirmation_number, r.make, r.model, r.color, r.room_number, r.phone]
@@ -287,11 +320,8 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
       .sort((a, b) => a.checkout_at.localeCompare(b.checkout_at));
   }, [parked, q, tab]);
 
-  const counts = {
-    all: parked.length,
-    inside: parked.filter((r) => r.location === "inside").length,
-    outside: parked.filter((r) => r.location === "outside").length,
-  };
+  const count = (l: LotId) => parked.filter((r) => recordLot(r) === l).length;
+
 
   return (
     <section className="card overflow-hidden">
@@ -299,9 +329,8 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
         <SectionTitle icon={<CarFront />} title="Cars here now" />
         <Segmented value={tab} onChange={setTab}
           options={[
-            { value: "all", label: "All", count: counts.all },
-            { value: "inside", label: "Inside", count: counts.inside },
-            { value: "outside", label: "Outside", count: counts.outside },
+            { value: "all", label: "All", count: parked.length },
+            ...LOTS.map((l) => ({ value: l.id, label: l.id === "hotel" ? "Hotel" : l.name, count: count(l.id) })),
           ]} />
         <div className="relative ml-auto w-full sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -345,7 +374,7 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
                         <span>
                           <span className="block font-semibold text-slate-900 group-hover:text-brand-700">{r.guest_name}</span>
                           <span className="block text-xs text-slate-500">
-                            {r.source === "online" ? "Online" : "Walk-in"}
+                            {sourceLabel(r.source)}
                             {r.room_number && ` · Room ${r.room_number}`}
                           </span>
                         </span>
@@ -353,9 +382,15 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
                     </td>
                     <td className="whitespace-nowrap px-3 py-3">
                       <Plate plate={r.license_plate} state={r.plate_state} />
-                      <div className="mt-1 text-xs text-slate-500">{carLabel(r)}</div>
+                      <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                        {r.vehicle_type && <VehicleIcon type={r.vehicle_type} className="h-3.5 w-3.5 text-slate-400" />}
+                        {carLabel(r)}
+                      </div>
                     </td>
-                    <td className="px-3 py-3"><WhereChip location={r.location} /></td>
+                    <td className="px-3 py-3">
+                      <LotChip lot={recordLot(r)} />
+                      {!lotFits(recordLot(r), r.vehicle_type) && <div className="mt-1 text-[11px] font-semibold text-amber-600">Wrong lot for {vehicleLabel(r.vehicle_type)}</div>}
+                    </td>
                     <td className="whitespace-nowrap px-3 py-3">
                       <div className="font-medium text-slate-800">{fmtDateTime(r.checkout_at)}</div>
                       <span className={`mt-1 inline-flex items-center gap-1 text-xs ${soon ? "font-semibold text-amber-600" : "text-slate-500"}`}>
@@ -370,8 +405,10 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
                         <Menu items={[
                           { label: "Edit details", icon: <Pencil />, onSelect: () => router.push(`/cars/${r.id}`) },
                           { label: "Update stay / extend", icon: <CalendarRange />, onSelect: () => onUpdateStay(r) },
-                          { label: "Move inside fence", icon: <ArrowRightLeft />, onSelect: () => onMove(r, "inside"), hidden: r.location === "inside" || lotFull },
-                          { label: "Move outside fence", icon: <ArrowRightLeft />, onSelect: () => onMove(r, "outside"), hidden: r.location === "outside" },
+                          ...LOTS.map((l) => ({
+                            label: `Move to ${l.name}`, icon: <ArrowRightLeft />, onSelect: () => onMove(r, l.id),
+                            hidden: recordLot(r) === l.id || (l.id === "lot1" && lotFull),
+                          })),
                           { label: "Check out now", icon: <LogOut />, onSelect: () => onCheckOut(r), danger: true, divider: true },
                         ]}>
                           <Ellipsis className="h-4 w-4" />
@@ -386,18 +423,6 @@ function ParkedTable({ parked, now, lotFull, onCheckOut, onUpdateStay, onMove }:
         </div>
       )}
     </section>
-  );
-}
-
-function WhereChip({ location }: { location: "inside" | "outside" }) {
-  return location === "inside" ? (
-    <span className="chip bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-      <span className="h-1.5 w-1.5 rounded-full bg-brand-500" /> Inside
-    </span>
-  ) : (
-    <span className="chip bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-100">
-      <span className="h-1.5 w-1.5 rounded-full bg-sky-500" /> Outside
-    </span>
   );
 }
 
@@ -447,7 +472,7 @@ function UpcomingPanel({ upcoming, parked, now, onArrived }: {
   /** Rough guess of how many inside spots will be free when that day starts. */
   function forecast(day: number, arriving: number) {
     const dayStart = day === today ? now : day;
-    const stillParked = parked.filter((r) => r.location === "inside" && new Date(r.checkout_at).getTime() > dayStart).length;
+    const stillParked = parked.filter((r) => recordLot(r) === "lot1" && new Date(r.checkout_at).getTime() > dayStart).length;
     const earlierRes = upcoming.filter((r) => {
       const a = Math.max(now, new Date(r.arrival_at).getTime());
       return startOfDay(a).getTime() < day && a + r.days * DAY > dayStart;
@@ -473,7 +498,7 @@ function UpcomingPanel({ upcoming, parked, now, onArrived }: {
                     <span className="ml-1.5 font-medium text-slate-400">{list.length}</span>
                   </h3>
                   <span className={`chip ${f.overflow > 0 ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                    {f.overflow > 0 ? `~${f.overflow} may park outside` : `~${f.free} spot${f.free === 1 ? "" : "s"} free`}
+                    {f.overflow > 0 ? `~${f.overflow} may go to Lot 3` : `~${f.free} spot${f.free === 1 ? "" : "s"} free`}
                   </span>
                 </div>
                 <ul className="space-y-2">
@@ -521,7 +546,7 @@ function LeavingToday({ cars, now }: { cars: ParkingRecord[]; now: number }) {
                 <Avatar name={r.guest_name} tone="amber" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-semibold">{r.guest_name}</span>
-                  <span className="block truncate text-xs text-slate-500">{r.license_plate} · {r.location}</span>
+                  <span className="block truncate text-xs text-slate-500">{r.license_plate} · {lotName(recordLot(r))}</span>
                 </span>
                 <span className="text-right text-xs">
                   <span className="block font-semibold text-slate-800">{fmtTime(r.checkout_at)}</span>

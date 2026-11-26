@@ -1,7 +1,8 @@
 "use client";
 
 import { supabaseBrowser } from "./supabase/client";
-import { isLotFullError, type Location, type ParkingRecord, type Payment } from "./types";
+import { isLotFullError, type ParkingRecord, type Payment } from "./types";
+import { lotName, recordLot, suggestLot, type LotId } from "./lots";
 import { DAY } from "./time";
 
 type Result = { ok: true; note?: string } | { ok: false; error: string };
@@ -20,23 +21,24 @@ async function update(id: string, patch: Patch): Promise<Result> {
 }
 
 /**
- * Save something that may need an inside spot. If the lot filled up in the
- * meantime, save it as "outside fence" instead and say so.
+ * Save something that may need a Lot 1 spot. If Lot 1 filled up in the
+ * meantime, save it in Lot 3 instead and say so.
  */
 async function updateWithFallback(id: string, patch: Patch): Promise<Result> {
   const first = await update(id, patch);
-  if (first.ok || !isLotFullError(first.error) || patch.location === "outside") return first;
-  const second = await update(id, { ...patch, location: "outside" });
-  return second.ok ? { ok: true, note: "The lot is full, so this car was put OUTSIDE the fence." } : second;
+  if (first.ok || !isLotFullError(first.error)) return first;
+  const second = await update(id, { ...patch, lot: "lot3", location: "outside" });
+  return second.ok ? { ok: true, note: "Lot 1 is full, so this car was put in Lot 3." } : second;
 }
 
+const lotPatch = (lot: LotId) => ({ lot, location: lot === "lot1" ? ("inside" as const) : ("outside" as const) });
+
 /** Reservation guest showed up. Paid days start counting now. */
-export function markArrived(r: ParkingRecord, lotFull: boolean) {
-  const location: Location = lotFull ? "outside" : "inside";
+export function markArrived(r: ParkingRecord, lot1Full: boolean) {
   return updateWithFallback(r.id, {
     status: "parked",
     arrival_at: new Date().toISOString(),
-    location,
+    ...lotPatch(suggestLot(r.vehicle_type, lot1Full)),
   });
 }
 
@@ -53,8 +55,11 @@ export function extend(r: ParkingRecord, addDays: number) {
   return updateWithFallback(r.id, { status: "parked", days });
 }
 
-export function moveTo(r: ParkingRecord, location: Location) {
-  return update(r.id, { location });
+export async function moveToLot(r: ParkingRecord, lot: LotId): Promise<Result> {
+  if (recordLot(r) === lot) return { ok: true };
+  const res = await update(r.id, lotPatch(lot));
+  if (!res.ok && isLotFullError(res.error)) return { ok: false, error: `${lotName("lot1")} is full.` };
+  return res;
 }
 
 export function cancelReservation(r: ParkingRecord) {

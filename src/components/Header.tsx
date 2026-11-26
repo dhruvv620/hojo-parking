@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, History, LayoutDashboard, LogOut, Plus, SquareParking } from "lucide-react";
+import { ChevronDown, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
 import { Menu } from "./ui/Dropdown";
@@ -12,6 +12,7 @@ import { useConfirm } from "./ui/Confirm";
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
   { href: "/history", label: "History", icon: History },
+  { href: "/qr", label: "Guest QR", icon: QrCode },
 ];
 
 export function Header() {
@@ -34,7 +35,7 @@ export function Header() {
   const initial = (email ?? "?").slice(0, 1).toUpperCase();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 print:hidden border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="group flex items-center gap-2.5 rounded-xl pr-1">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30 transition-transform duration-200 group-hover:scale-105">

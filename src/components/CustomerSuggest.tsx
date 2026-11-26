@@ -7,6 +7,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { carLabel, liveStatus, type ParkingRecord } from "@/lib/types";
 import { fmtDateTime, fmtDay } from "@/lib/time";
 import { Avatar, Plate } from "./ui/bits";
+import { lotName, recordLot } from "@/lib/lots";
 
 export type Customer = {
   guest_name: string;
@@ -16,6 +17,7 @@ export type Customer = {
   make: string | null;
   model: string | null;
   color: string | null;
+  vehicle_type: "car" | "suv" | "truck" | null;
   visits: number;
   lastVisit: string;
 };
@@ -88,7 +90,7 @@ export function CustomerSuggest({ query, onPick, onClose, inputRef }: Props) {
     else
       byPlate.set(key, {
         guest_name: r.guest_name, phone: r.phone, license_plate: r.license_plate, plate_state: r.plate_state,
-        make: r.make, model: r.model, color: r.color, visits: 1, lastVisit: r.arrival_at,
+        make: r.make, model: r.model, color: r.color, vehicle_type: r.vehicle_type, visits: 1, lastVisit: r.arrival_at,
       });
   }
   const customers = [...byPlate.values()].slice(0, 6);
@@ -184,7 +186,7 @@ export function CustomerSuggest({ query, onPick, onClose, inputRef }: Props) {
                   <Avatar name={r.guest_name} tone="amber" />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 truncate font-semibold">{r.guest_name} <Plate plate={r.license_plate} /></span>
-                    <span className="block truncate text-xs text-slate-500">Parked {r.location} · leaves {fmtDateTime(r.checkout_at)}</span>
+                    <span className="block truncate text-xs text-slate-500">Parked in {lotName(recordLot(r))} · leaves {fmtDateTime(r.checkout_at)}</span>
                   </span>
                   <span className="chip bg-amber-100 text-amber-800">Open</span>
                 </button>

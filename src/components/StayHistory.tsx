@@ -10,6 +10,7 @@ import { markChangePaid } from "@/lib/actions";
 import type { StayChange, StayChangeKind } from "@/lib/types";
 import { fmtDateTime } from "@/lib/time";
 import { useRun } from "./Toast";
+import { lotById } from "@/lib/lots";
 import { useConfirm } from "./ui/Confirm";
 import { EmptyState, SectionTitle } from "./ui/bits";
 
@@ -113,7 +114,13 @@ export function StayHistory({ recordId, refreshKey, onUnpaidCount }: {
                       {diff !== 0 && (c.kind === "extended" || c.kind === "shortened") && (
                         <span className="font-normal text-slate-500"> by {Math.abs(diff)} day{Math.abs(diff) > 1 ? "s" : ""}</span>
                       )}
-                      {c.kind === "moved" && c.new_location && <span className="font-normal text-slate-500"> {c.new_location} the fence</span>}
+                      {c.kind === "moved" && c.new_location && (
+                        <span className="font-normal text-slate-500">
+                          {lotById(c.new_location)
+                            ? <> {lotById(c.old_location)?.name ? `from ${lotById(c.old_location)!.name} ` : ""}to {lotById(c.new_location)!.name}</>
+                            : <> {c.new_location} the fence</>}
+                        </span>
+                      )}
                     </span>
                     <PaymentChip c={c} onMarkPaid={() => markPaid(c)} />
                   </div>

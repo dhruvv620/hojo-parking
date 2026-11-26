@@ -68,7 +68,9 @@ Open the link, log in with a user from step 3, and you're ready.
 - **Guest extends (or shortens) their stay:** open the car (or use **⋯** on the dashboard) > **Update stay**. Pick the new check-out date, choose **Paid / Not paid yet / No charge**, add the amount and a note. It all shows in the car's **Stay history**, with who made the change and when. Unpaid changes show an amber badge until someone presses **Mark paid**.
 - **Guest leaves early:** open the car (or use the table) > **Check out now**.
 - **Space opens up for a car parked outside:** press **Move inside** in the table.
-- **Mark where a car is parked (optional):** on Add Car or a car's page, use **Spot on the map** on the right. Pick the area (**Fenced lot**, **401 lot** or **Hotel lot**), then tap where the car is to drop a pin. Dark dots show where other cars were marked. Use the expand button for a bigger map. To change a picture, replace the file in `public/maps/` with a new top-down screenshot of the same area and framing, and update its width/height in `src/components/LotMap.tsx` (pins are saved as positions on the picture).
+- **Lots:** **Lot 1** (fenced lot, 402/406 E Melvin St) is for cars & SUVs and is the only lot that counts toward the 67. **Lot 2** (401 E Melvin St) is for trucks. **Lot 3** takes any vehicle. **Hotel Lot** is behind the hotel. When adding a car, pick Car / SUV / Truck and the app suggests the lot (trucks to Lot 2; cars & SUVs to Lot 1, or Lot 3 when Lot 1 is full). Staff can always change it.
+- **Guest self check-in:** open **Guest QR** in the top menu, press **Print sign** and put it at the front desk. Guests scan it with their phone, pick Car / SUV / Truck, see where to park, fill in their details and submit. The car appears on the dashboard straight away (marked **Self check-in**). If the QR code is ever misused, press **Make new code** and print the new sign; the old one stops working.
+- **Mark where a car is parked (optional):** on Add Car or a car's page, use **Spot on the map** on the right: pick the lot tab, then tap where the car is. To change a lot's picture, replace its file in `public/maps/` (same framing) and update its width/height in `src/lib/lots.ts`. Lot 3 has no picture yet: add one there with `src: "/maps/lot-3.webp"` and its size.
 - **Find an old record:** **History** > search by name or plate. **Download CSV** gives a spreadsheet.
 
 Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it opens like an app.
@@ -81,6 +83,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-3-stay-history.sql`: adds **Update stay** and the **Stay history** log (extensions, payments, notes).
 - `supabase/update-4-map-pin.sql`: adds the optional **Spot on the map** pin (run update 3 first).
 - `supabase/update-5-map-areas.sql`: lets the pin be on any of the three parking areas.
+- `supabase/update-6-lots-and-guest-form.sql`: Lot 1 / Lot 2 / Lot 3 / Hotel Lot, vehicle type, and the guest QR check-in form.
 
 ## Changing the lot size
 

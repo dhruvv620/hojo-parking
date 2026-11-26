@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import { SectionTitle } from "./ui/bits";
 import { DatePicker } from "./ui/DatePicker";
-import { LotMapCard, mapById, type OtherPin, type Pin } from "./LotMap";
+import { LotMapCard, type OtherPin, type Pin } from "./LotMap";
+import { LOTS, VEHICLES, lotById, lotFits, normalizeLot, recordLot, suggestLot, type LotId, type VehicleType } from "@/lib/lots";
+import { VehicleIcon } from "./ui/bits";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
-import { isLotFullError, type Location, type ParkingRecord, type Source } from "@/lib/types";
+import { isLotFullError, type ParkingRecord, type Source } from "@/lib/types";
 import { addDays, fmtDateTime, fmtTime, fromLocalInput, toLocalInput } from "@/lib/time";
 import { CustomerSuggest, type Customer } from "./CustomerSuggest";
 
@@ -47,19 +49,22 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
     make: record?.make ?? "",
     model: record?.model ?? "",
     color: record?.color ?? "",
-    location: (record?.location ?? (lotFull ? "outside" : "inside")) as Location,
+    lot: (record ? recordLot(record) : suggestLot(null, lotFull)) as LotId | null,
+    vehicle_type: (record?.vehicle_type ?? null) as VehicleType | null,
     arrival: toLocalInput(record?.arrival_at ?? new Date()),
     futureArrival: toLocalInput(record?.status === "reserved" ? record.arrival_at : nextMorning()),
     days: record?.days ?? 1,
     fence_told: record?.fence_told ?? false,
     notes: record?.notes ?? "",
     spot: (record?.spot_x != null && record?.spot_y != null
-      ? { map: mapById(record.spot_map).id, x: Number(record.spot_x), y: Number(record.spot_y) }
+      ? { map: normalizeLot(record.spot_map) ?? recordLot(record) ?? "lot1", x: Number(record.spot_x), y: Number(record.spot_y) }
       : null) as Pin | null,
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fullRetry, setFullRetry] = useState(false);
+  // once staff pick a lot by hand, changing the vehicle type no longer moves it
+  const [lotTouched, setLotTouched] = useState(!!record);
   // which field the look-up drop-down is showing under (Add Car only)
   const [lookup, setLookup] = useState<null | "guest_name" | "license_plate" | "confirmation_number">(null);
   const [picked, setPicked] = useState<string | null>(null);
@@ -67,7 +72,21 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((s) => ({ ...s, [k]: v }));
 
+  function chooseVehicle(v: VehicleType) {
+    setF((s) => ({ ...s, vehicle_type: v, ...(lotTouched ? {} : { lot: suggestLot(v, lotFull) }) }));
+  }
+  function chooseLot(l: LotId) {
+    setLotTouched(true);
+    // a pin on another lot's picture no longer makes sense
+    setF((s) => ({ ...s, lot: l, spot: s.spot && s.spot.map !== l ? null : s.spot }));
+  }
+  function choosePin(p: Pin | null) {
+    if (p && p.map !== f.lot) setLotTouched(true);
+    setF((s) => ({ ...s, spot: p, ...(p ? { lot: p.map } : {}) }));
+  }
+
   function pickCustomer(c: Customer) {
+    if (c.vehicle_type) chooseVehicle(c.vehicle_type);
     setF((s) => ({
       ...s,
       guest_name: c.guest_name,
@@ -103,16 +122,17 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       : fromLocalInput(f.arrival);
   const days = Math.max(1, Math.min(365, Number(f.days) || 1));
   const checkout = addDays(arrivalIso, days);
-  // If the lot fills up while this form is open, switch to outside automatically.
-  const loc: Location = lotFull ? "outside" : f.location;
-  const showInside = !isFuture && loc === "inside";
+  // If Lot 1 fills up while this form is open, move the car to Lot 3 automatically.
+  const lot: LotId | null = f.lot === "lot1" && lotFull ? "lot3" : f.lot;
+  const lotInfo = lotById(lot);
+  const misfit = !lotFits(lot, f.vehicle_type);
 
-  async function save(forceOutside = false) {
+  async function save(forceLot3 = false) {
     setBusy(true);
     setError(null);
     setFullRetry(false);
 
-    const location: Location = forceOutside ? "outside" : loc;
+    const chosen: LotId | null = forceLot3 ? "lot3" : lot;
     const payload = {
       guest_name: f.guest_name.trim(),
       confirmation_number: f.confirmation_number.trim() || null,
@@ -124,10 +144,12 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       make: f.make.trim() || null,
       model: f.model.trim() || null,
       color: f.color.trim() || null,
-      location,
+      lot: chosen,
+      location: chosen === "lot1" ? "inside" : "outside",
+      vehicle_type: f.vehicle_type,
       arrival_at: arrivalIso,
       days,
-      fence_told: location === "inside" ? f.fence_told : false,
+      fence_told: chosen ? f.fence_told : false,
       notes: f.notes.trim() || null,
       spot_x: isFuture ? null : f.spot?.x ?? null,
       spot_y: isFuture ? null : f.spot?.y ?? null,
@@ -143,14 +165,14 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
     setBusy(false);
     if (error) {
       if (isLotFullError(error.message)) {
-        setError(`The lot just filled up (${LOT_CAPACITY} / ${LOT_CAPACITY}). Park this car outside the fence?`);
+        setError(`Lot 1 just filled up (${LOT_CAPACITY} / ${LOT_CAPACITY}). Park this car in Lot 3 instead?`);
         setFullRetry(true);
       } else {
         setError(error.message);
       }
       return;
     }
-    onSaved(data as ParkingRecord, forceOutside ? "Saved as parked OUTSIDE the fence." : undefined);
+    onSaved(data as ParkingRecord, forceLot3 ? "Lot 1 was full, so this car was saved in Lot 3." : undefined);
   }
 
   function onSubmit(e: React.FormEvent) {
@@ -302,6 +324,18 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
               ))}
             </div>
           </div>
+          <div className="sm:col-span-2">
+            <span className="label">Vehicle type</span>
+            <div className="grid grid-cols-3 gap-2">
+              {VEHICLES.map((v) => (
+                <button type="button" key={v.id} onClick={() => chooseVehicle(v.id)} data-active={f.vehicle_type === v.id}
+                  aria-pressed={f.vehicle_type === v.id}
+                  className="choice flex h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700">
+                  <VehicleIcon type={v.id} className="h-4 w-4" /> {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="grid grid-cols-[1fr_84px] gap-2">
             <Field label="Plate number" required value={f.license_plate} onChange={(v) => set("license_plate", v.toUpperCase())} mono
               icon={<RectangleHorizontal />} placeholder="ABC 1234" {...lookupProps("license_plate")} />
@@ -326,25 +360,47 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
         </div>
       </section>
 
-      {/* Where */}
+      {/* Where: which lot */}
       {!isFuture && (
         <section className="card p-5 sm:p-6">
-          <SectionTitle icon={<MapPin />} title="Where is it parked?"
-            sub={`${insideCount} of ${LOT_CAPACITY} inside spots taken${wasInside ? " (including this car)" : ""}.`} />
+          <SectionTitle icon={<MapPin />} title="Which lot?"
+            sub={`Lot 1: ${insideCount} of ${LOT_CAPACITY} spots taken${wasInside ? " (including this car)" : ""}.`} />
           {lotFull && (
             <div className="mt-4 flex items-center gap-3 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 px-4 py-3 text-sm text-white shadow-md shadow-red-600/20">
               <TriangleAlert className="h-5 w-5 shrink-0" />
-              <span><b>LOT FULL.</b> No inside spots left. This car will be logged as parking <b>outside the fence</b>.</span>
+              <span><b>LOT 1 FULL.</b> Cars and SUVs go to <b>Lot 3</b>.</span>
             </div>
           )}
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <Choice active={loc === "inside"} disabled={lotFull} onClick={() => set("location", "inside")}
-              icon={<SquareParking />} title="Inside the fence" sub={`Counts toward the ${LOT_CAPACITY}`} />
-            <Choice active={loc === "outside"} onClick={() => set("location", "outside")}
-              icon={<ArrowRightLeft />} title="Outside the fence" sub="Lot full or overflow" />
+            {LOTS.map((l) => {
+              const full = l.id === "lot1" && lotFull;
+              const free = l.id === "lot1" ? Math.max(0, LOT_CAPACITY - insideCount) : null;
+              const wrongType = !lotFits(l.id, f.vehicle_type);
+              return (
+                <button key={l.id} type="button" onClick={() => chooseLot(l.id)} disabled={full} data-active={lot === l.id} aria-pressed={lot === l.id}
+                  className="choice relative flex flex-col items-start gap-1 p-3.5 sm:p-4">
+                  <span className="flex w-full items-center gap-2">
+                    <span className={`h-2.5 w-2.5 rounded-full ${l.dot}`} />
+                    <span className={`font-bold ${lot === l.id ? "text-brand-900" : "text-slate-800"}`}>{l.name}</span>
+                    {lot === l.id && <Check className="ml-auto h-4 w-4 text-brand-600" strokeWidth={3} />}
+                  </span>
+                  <span className={`text-xs font-semibold ${wrongType ? "text-amber-700" : "text-slate-600"}`}>{l.rule}</span>
+                  <span className="text-[11px] text-slate-400">
+                    {full ? "Full" : free !== null ? `${free} spot${free === 1 ? "" : "s"} free` : l.id === "hotel" ? "Behind the hotel" : "No limit"}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {showInside && (
+          {misfit && lotInfo && (
+            <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800">
+              <TriangleAlert className="h-4 w-4 shrink-0" />
+              <span>{lotInfo.name} is for <b>{lotInfo.rule.replace(" only", "").toLowerCase()}</b>. You can still save it here.</span>
+            </div>
+          )}
+
+          {lotInfo && (
             <label className={`mt-4 flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
               f.fence_told ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50 hover:bg-amber-100/60"}`}>
               <span className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${
@@ -355,7 +411,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
               </span>
               <span>
                 <span className={`block font-bold ${f.fence_told ? "text-emerald-900" : "text-amber-900"}`}>
-                  Tell the guest: park INSIDE the fence only.
+                  Tell the guest: park in {lotInfo.name}, {lotInfo.place}.
                 </span>
                 <span className={`text-sm ${f.fence_told ? "text-emerald-700" : "text-amber-800"}`}>
                   {f.fence_told ? "Done. Guest has been told." : "Tick when you have told them."}
@@ -371,8 +427,8 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
           <CircleAlert className="h-4 w-4 shrink-0" />
           <span className="flex-1">{error}</span>
           {fullRetry && (
-            <button type="button" className="btn-primary btn-sm" onClick={() => { set("location", "outside"); save(true); }}>
-              Save as outside
+            <button type="button" className="btn-primary btn-sm" onClick={() => { chooseLot("lot3"); save(true); }}>
+              Save in Lot 3
             </button>
           )}
         </div>
@@ -395,7 +451,7 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       {/* Map: small card on the right (below the form on phones) */}
       {!isFuture && (
         <aside className="lg:sticky lg:top-24">
-          <LotMapCard pin={f.spot} onChange={(p) => set("spot", p)} others={otherPins.filter((o) => o.id !== record?.id)}
+          <LotMapCard pin={f.spot} onChange={choosePin} lot={lot} others={otherPins.filter((o) => o.id !== record?.id)}
             plate={f.license_plate.trim() || undefined} />
         </aside>
       )}

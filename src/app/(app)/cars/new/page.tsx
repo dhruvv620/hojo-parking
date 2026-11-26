@@ -7,6 +7,7 @@ import { useParking } from "@/lib/useParking";
 import { useToast } from "@/components/Toast";
 import { ArrowLeft } from "lucide-react";
 import { pinsOf } from "@/lib/types";
+import { lotName, recordLot } from "@/lib/lots";
 
 export default function NewCarPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function NewCarPage() {
           onSaved={(r, note) => {
             if (note) toast(note, "warn");
             else if (r.status === "reserved") toast(`Reservation saved for ${r.guest_name}.`);
-            else toast(`${r.guest_name} checked in (${r.location === "inside" ? "inside the fence" : "outside the fence"}).`);
+            else toast(`${r.guest_name} checked in (${lotName(recordLot(r))}).`);
             router.push("/");
           }} />
       )}

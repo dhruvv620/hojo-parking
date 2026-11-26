@@ -1,4 +1,6 @@
-export type Source = "walk_in" | "online";
+import { normalizeLot, recordLot } from "./lots";
+
+export type Source = "walk_in" | "online" | "guest_form";
 export type Location = "inside" | "outside";
 export type Status = "reserved" | "parked" | "checked_out" | "cancelled";
 
@@ -25,8 +27,11 @@ export interface ParkingRecord {
   /** Map pin: 0-100 from left / top of the lot picture. */
   spot_x: number | null;
   spot_y: number | null;
-  /** Which parking area the pin is on: fenced, lot401 or hotel. */
+  /** Which lot the map pin is on: lot1, lot2, lot3 or hotel. */
   spot_map: string | null;
+  /** lot1 (fenced, counts toward the limit), lot2, lot3 or hotel. */
+  lot: string | null;
+  vehicle_type: "car" | "suv" | "truck" | null;
   created_at: string;
   updated_at: string;
 }
@@ -59,13 +64,15 @@ export function pinsOf(records: ParkingRecord[]) {
     .filter((r) => r.spot_x != null && r.spot_y != null)
     .map((r) => ({
       id: r.id,
-      map: (r.spot_map === "lot401" || r.spot_map === "hotel" ? r.spot_map : "fenced") as "fenced" | "lot401" | "hotel",
+      map: normalizeLot(r.spot_map) ?? recordLot(r) ?? "lot1",
       x: Number(r.spot_x),
       y: Number(r.spot_y),
       label: r.license_plate,
       sub: r.guest_name,
     }));
 }
+
+export const sourceLabel = (s: Source) => (s === "online" ? "Online" : s === "guest_form" ? "Self check-in" : "Walk-in");
 
 export function carLabel(r: Pick<ParkingRecord, "color" | "make" | "model">) {
   return [r.color, r.make, r.model].filter(Boolean).join(" ") || "Car details not entered";

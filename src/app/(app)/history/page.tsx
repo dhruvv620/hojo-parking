@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
-import { carLabel, leftAt, liveStatus, type ParkingRecord } from "@/lib/types";
+import { carLabel, leftAt, liveStatus, sourceLabel, type ParkingRecord } from "@/lib/types";
+import { lotName, recordLot, vehicleLabel } from "@/lib/lots";
 import { CalendarDays, Download, History, LoaderCircle, Search, X } from "lucide-react";
 import { Select } from "@/components/ui/Dropdown";
-import { Avatar, EmptyState, Plate } from "@/components/ui/bits";
+import { Avatar, EmptyState, LotChip, Plate } from "@/components/ui/bits";
 import { DAY, fmtDateTime } from "@/lib/time";
 
 const RANGES = [
@@ -52,11 +53,11 @@ export default function HistoryPage() {
   }, [load]);
 
   function exportCsv() {
-    const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Plate", "State", "Make", "Model", "Color", "Where", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
+    const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Vehicle", "Plate", "State", "Make", "Model", "Color", "Lot", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
     const now = Date.now();
     const lines = rows.map((r) => [
-      r.guest_name, r.confirmation_number, r.phone, r.room_number, r.source === "online" ? "Online" : "Walk-in", r.license_plate, r.plate_state,
-      r.make, r.model, r.color, r.location, liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
+      r.guest_name, r.confirmation_number, r.phone, r.room_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate, r.plate_state,
+      r.make, r.model, r.color, lotName(recordLot(r)), liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
       fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.notes,
     ].map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`).join(","));
     const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" });
@@ -108,7 +109,7 @@ export default function HistoryPage() {
               <tr>
                 <th className="px-5 py-3">Guest</th>
                 <th className="px-3 py-3">Car</th>
-                <th className="px-3 py-3">Where</th>
+                <th className="px-3 py-3">Lot</th>
                 <th className="px-3 py-3">Arrived</th>
                 <th className="px-3 py-3">Left</th>
                 <th className="px-5 py-3">Status</th>
@@ -132,7 +133,7 @@ export default function HistoryPage() {
                         <span>
                           <span className="block font-semibold group-hover:text-brand-700">{r.guest_name}</span>
                           <span className="block text-xs text-slate-500">
-                            {r.source === "online" ? "Online" : "Walk-in"}
+                            {sourceLabel(r.source)}
                             {r.confirmation_number && ` · #${r.confirmation_number}`}
                             {r.room_number && ` · Room ${r.room_number}`}
                           </span>
@@ -143,7 +144,7 @@ export default function HistoryPage() {
                       <Plate plate={r.license_plate} state={r.plate_state} />
                       <div className="mt-1 text-xs text-slate-500">{carLabel(r)}</div>
                     </td>
-                    <td className="px-3 py-3 capitalize text-slate-600">{r.location}</td>
+                    <td className="px-3 py-3"><LotChip lot={recordLot(r)} /></td>
                     <td className="whitespace-nowrap px-3 py-3">
                       {fmtDateTime(r.arrival_at)}
                       <div className="text-xs text-slate-500">{r.days} day{r.days > 1 ? "s" : ""}</div>
