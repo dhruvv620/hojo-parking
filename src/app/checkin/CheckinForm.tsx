@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
-import { LOTS, VEHICLES, lotById, suggestLot, type LotId, type VehicleType } from "@/lib/lots";
+import { LOTS, VEHICLES, lotById, lotFits, suggestLot, type LotId, type VehicleType } from "@/lib/lots";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { VehicleIcon } from "@/components/ui/bits";
 import { DirectionsButtons } from "@/components/DirectionsButtons";
@@ -27,6 +27,7 @@ export function CheckinForm() {
   const [status, setStatus] = useState<"loading" | "invalid" | "ready">("loading");
   const [lot1Free, setLot1Free] = useState<number | null>(null);
   const [lotsFull, setLotsFull] = useState<LotId[]>([]);
+  const [pick, setPick] = useState<LotId | null>(null);
   const [vehicle, setVehicle] = useState<VehicleType | null>(null);
   const [f, setF] = useState({ name: "", phone: "", plate: "", state: "AZ", make: "", model: "", color: "", confirmation: "", website: "" });
   const [checkout, setCheckout] = useState<Date>(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; });
@@ -45,9 +46,15 @@ export function CheckinForm() {
 
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
   const days = daysFromToday(checkout);
-  const lot = vehicle ? lotById(suggestLot(vehicle, lot1Free === 0)) : null;
-  // staff marked this lot Full: the guest asks the front desk instead
-  const lotIsFull = !!lot && lotsFull.includes(lot.id);
+  // lots this guest may use: allowed for their vehicle, not marked Full by staff,
+  // and (Lot 1) not out of spots. Cars & SUVs: Lot 1 / Lot 3; trucks: Lot 2 / Lot 3.
+  const options: LotId[] = vehicle
+    ? (["lot1", "lot2", "lot3"] as LotId[]).filter((id) => lotFits(id, vehicle) && !lotsFull.includes(id) && !(id === "lot1" && lot1Free === 0))
+    : [];
+  const lot = lotById(pick && options.includes(pick) ? pick : options[0]);
+  // the lot they'd normally get, for the "ask the front desk" message when nothing is open
+  const usual = vehicle ? lotById(suggestLot(vehicle, lot1Free === 0)) : null;
+  const askDesk = !!vehicle && options.length === 0;
   const missing = {
     vehicle: !vehicle,
     name: f.name.trim().length < 2,
@@ -66,7 +73,7 @@ export function CheckinForm() {
       return;
     }
     setBusy(true);
-    const { data, error } = await supabaseBrowser().rpc("guest_check_in", {
+    const args = {
       p_token: token,
       p_name: f.name.trim(),
       p_phone: f.phone.trim(),
@@ -79,7 +86,12 @@ export function CheckinForm() {
       p_confirmation: f.confirmation.trim(),
       p_checkout_date: ymd(checkout),
       p_website: f.website,
-    });
+    };
+    let { data, error } = await supabaseBrowser().rpc("guest_check_in", { ...args, p_lot: lot?.id ?? null });
+    // before update 11 the database doesn't know p_lot: send without it
+    if (error && /p_lot|function|schema cache/i.test(error.message)) {
+      ({ data, error } = await supabaseBrowser().rpc("guest_check_in", args));
+    }
     setBusy(false);
     if (error) {
       setError(niceError(error.message));
@@ -184,25 +196,60 @@ export function CheckinForm() {
 
         {/* where to park */}
         <section className="card overflow-hidden">
-          {lot && lotIsFull ? (
-            <div className="animate-rise border-b border-slate-100 p-4"><AskDesk lotName={lot.name} /></div>
+          {askDesk ? (
+            <div className="animate-rise border-b border-slate-100 p-4"><AskDesk lotName={usual?.name} /></div>
           ) : lot ? (
             <div className="animate-rise border-b border-slate-100 bg-gradient-to-b from-brand-50/80 to-white p-4">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
-                <MapPin className="h-3.5 w-3.5" /> Park here
+                <MapPin className="h-3.5 w-3.5" /> {options.length > 1 ? "Choose where to park" : "Park here"}
               </div>
-              <div className="mt-1 flex items-center gap-2">
-                <span className={`h-3 w-3 rounded-full ${lot.dot}`} />
-                <span className="text-xl font-extrabold">{lot.name}</span>
-                <span className="text-sm text-slate-500">· {lot.rule}</span>
-              </div>
-              <div className="text-sm text-slate-600">{lot.place}</div>
-              {vehicle !== "truck" && lot1Free === 0 && (
-                <p className="mt-1 text-xs font-medium text-amber-700">Lot 1 is full right now, so please use Lot 3.</p>
+              {options.length > 1 ? (
+                <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Choose a lot">
+                  {options.map((id) => {
+                    const o = lotById(id)!;
+                    const active = id === lot.id;
+                    return (
+                      <button key={id} type="button" role="radio" aria-checked={active} onClick={() => setPick(id)}
+                        className={`relative overflow-hidden rounded-xl border-2 bg-white text-left transition active:scale-[0.98] ${
+                          active ? "border-brand-500 shadow-md shadow-brand-600/10" : "border-slate-200 hover:border-slate-300"}`}>
+                        {o.src && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={o.src} alt="" className="h-20 w-full object-cover" />
+                        )}
+                        <span className="block p-2.5">
+                          <span className="flex items-center gap-1.5">
+                            <span className={`h-2.5 w-2.5 rounded-full ${o.dot}`} />
+                            <span className="font-extrabold">{o.name}</span>
+                          </span>
+                          <span className="block text-xs text-slate-500">
+                            {id === "lot1" && lot1Free !== null ? `${lot1Free} spot${lot1Free === 1 ? "" : "s"} free` : o.rule}
+                          </span>
+                        </span>
+                        {active && (
+                          <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white shadow">
+                            <CircleCheck className="h-4 w-4" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <>
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className={`h-3 w-3 rounded-full ${lot.dot}`} />
+                    <span className="text-xl font-extrabold">{lot.name}</span>
+                    <span className="text-sm text-slate-500">· {lot.rule}</span>
+                  </div>
+                  {lot.src && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={lot.src} alt={`${lot.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ maxHeight: 220 }} />
+                  )}
+                </>
               )}
-              {lot.src && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={lot.src} alt={`${lot.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ maxHeight: 220 }} />
+              <div className="mt-3 text-sm text-slate-600"><b className="text-slate-800">{lot.name}</b> · {lot.place}</div>
+              {vehicle !== "truck" && lot1Free === 0 && !lotsFull.includes("lot1") && (
+                <p className="mt-1 text-xs font-medium text-amber-700">Lot 1 has no spots right now.</p>
               )}
               <div className="mt-3"><DirectionsButtons lot={lot.id} /></div>
             </div>
@@ -213,12 +260,12 @@ export function CheckinForm() {
             </div>
             <ul className="space-y-1.5">
               {LOTS.filter((l) => l.id !== "hotel").map((l) => (
-                <li key={l.id} className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition ${lot?.id === l.id ? "bg-brand-50 ring-1 ring-brand-200" : ""}`}>
+                <li key={l.id} className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition ${!askDesk && lot?.id === l.id ? "bg-brand-50 ring-1 ring-brand-200" : ""}`}>
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
                   <b className="w-12 shrink-0">{l.name}</b>
                   <span className="flex-1 text-slate-600">{l.rule}</span>
                   {lotsFull.includes(l.id) && <span className="chip bg-red-100 text-red-700">Full</span>}
-                  {lot?.id === l.id && !lotsFull.includes(l.id) && <ArrowRight className="h-4 w-4 text-brand-600" />}
+                  {!askDesk && lot?.id === l.id && <ArrowRight className="h-4 w-4 text-brand-600" />}
                 </li>
               ))}
             </ul>
