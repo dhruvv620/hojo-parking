@@ -120,14 +120,41 @@ function PageHeader({ now }: { now: number }) {
 function Overview({ inside, available, outside, arrivingToday }: {
   inside: number; available: number; outside: number; arrivingToday: number;
 }) {
+  const total = inside + outside;
   const pct = Math.min(100, Math.round((inside / LOT_CAPACITY) * 100));
   const tone = pct >= 100 ? "#dc2626" : pct >= 85 ? "#f59e0b" : "#10b981";
+  const full = available === 0;
   const r = 44;
   const c = 2 * Math.PI * r;
+  const insideShare = total ? (inside / total) * 100 : 0;
 
   return (
-    <section className="grid gap-4 md:grid-cols-[auto_1fr]">
-      <div className="card flex items-center gap-5 p-5">
+    <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-[1fr_1.45fr_0.8fr_0.8fr]">
+      {/* 1. Total parked, split inside / outside */}
+      <div className="card col-span-2 flex flex-col p-5 lg:col-span-1">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><CarFront className="h-5 w-5" /></span>
+          <div className="text-sm font-medium text-slate-500">Total parked</div>
+        </div>
+        <div className="mt-3 text-4xl font-extrabold tabular-nums tracking-tight">{total}</div>
+        <div className="mt-auto pt-4">
+          <div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100" aria-hidden>
+            <div className="h-full bg-brand-500 transition-all duration-700" style={{ width: `${insideShare}%` }} />
+            <div className="h-full bg-sky-400 transition-all duration-700" style={{ width: `${total ? 100 - insideShare : 0}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between gap-2 text-xs">
+            <span className="flex items-center gap-1.5 text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-brand-500" /> <b className="tabular-nums text-slate-900">{inside}</b> inside fence
+            </span>
+            <span className="flex items-center gap-1.5 text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-sky-400" /> <b className="tabular-nums text-slate-900">{outside}</b> outside
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Inside the fence: gauge + spots available */}
+      <div className="card col-span-2 flex items-center gap-5 p-5 lg:col-span-1">
         <div className="relative h-24 w-24 shrink-0 sm:h-28 sm:w-28">
           <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
             <circle cx="50" cy="50" r={r} fill="none" stroke="#eef2f7" strokeWidth="10" />
@@ -140,24 +167,27 @@ function Overview({ inside, available, outside, arrivingToday }: {
             <span className="mt-1 text-[11px] font-medium text-slate-500">full</span>
           </div>
         </div>
-        <div>
+        <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-slate-500">Inside the fence</div>
-          <div className="mt-1 text-4xl font-extrabold tabular-nums tracking-tight">
+          <div className="mt-0.5 text-4xl font-extrabold tabular-nums tracking-tight">
             {inside}<span className="ml-1 text-xl font-bold text-slate-300">/ {LOT_CAPACITY}</span>
           </div>
-          <div className="mt-1 text-xs text-slate-500">Only inside cars count</div>
+          <div className={`mt-2.5 inline-flex items-center gap-2 rounded-xl px-3 py-1.5 ${
+            full ? "bg-red-50 text-red-700 ring-1 ring-inset ring-red-200" : "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200"}`}>
+            {full ? <TriangleAlert className="h-4 w-4" /> : <CircleCheck className="h-4 w-4" />}
+            <span className="text-sm font-semibold">
+              {full ? "Lot full, 0 spots" : <><span className="text-lg font-extrabold tabular-nums">{available}</span> spot{available === 1 ? "" : "s"} available</>}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 sm:gap-4">
-        <StatTile icon={<CircleCheck />} label="Spots available" value={available}
-          color={available === 0 ? "text-red-600" : "text-emerald-600"} badge={available === 0 ? "bg-red-50 text-red-600" : "bg-emerald-50 text-emerald-600"}
-          note={available === 0 ? "Lot is full" : `${available} of ${LOT_CAPACITY} open`} />
-        <StatTile icon={<ArrowRightLeft />} label="Parked outside" value={outside}
-          color="text-sky-700" badge="bg-sky-50 text-sky-600" note="Outside the fence" />
-        <StatTile icon={<CalendarClock />} label="Arriving today" value={arrivingToday}
-          color="text-violet-700" badge="bg-violet-50 text-violet-600" note="Reservations due" />
-      </div>
+      {/* 3. Outside the fence */}
+      <StatTile icon={<ArrowRightLeft />} label="Outside the fence" value={outside}
+        color="text-sky-700" badge="bg-sky-50 text-sky-600" note="Doesn't count toward 67" />
+      {/* 4. Arriving today */}
+      <StatTile icon={<CalendarClock />} label="Arriving today" value={arrivingToday}
+        color="text-violet-700" badge="bg-violet-50 text-violet-600" note="Reservations due" />
     </section>
   );
 }
@@ -166,12 +196,12 @@ function StatTile({ icon, label, value, color, badge, note }: {
   icon: React.ReactNode; label: string; value: number; color: string; badge: string; note: string;
 }) {
   return (
-    <div className="card p-3.5 sm:p-5">
+    <div className="card p-4 sm:p-5">
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg sm:h-10 sm:w-10 sm:rounded-xl [&>svg]:h-4 [&>svg]:w-4 sm:[&>svg]:h-5 sm:[&>svg]:w-5 ${badge}`}>{icon}</span>
       <div className="mt-2 sm:mt-3">
         <div className="text-xs font-medium leading-tight text-slate-500 sm:text-sm">{label}</div>
         <div className={`mt-0.5 text-2xl font-extrabold tabular-nums tracking-tight sm:text-3xl ${color}`}>{value}</div>
-        <div className="hidden text-xs text-slate-400 sm:block">{note}</div>
+        <div className="text-xs text-slate-400">{note}</div>
       </div>
     </div>
   );
