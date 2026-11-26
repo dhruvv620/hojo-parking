@@ -375,3 +375,11 @@ body {
     transition-duration: 1ms !important;
   }
 }
+
+/* Printing (e.g. the QR sign): plain white page, no shadows. */
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+}

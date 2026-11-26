@@ -12,7 +12,7 @@ export const VEHICLES: { id: VehicleType; label: string }[] = [
 /**
  * The parking areas. Only Lot 1 (the fenced lot) counts toward the limit.
  * To swap a picture, replace the file in public/maps/ (same framing) and
- * update its width/height here. Lot 3 has no picture yet.
+ * update its width/height here.
  */
 export const LOTS: {
   id: LotId;
@@ -39,8 +39,8 @@ export const LOTS: {
     dot: "bg-orange-500", chip: "bg-orange-50 text-orange-700 ring-orange-100",
   },
   {
-    id: "lot3", name: "Lot 3", place: "Any vehicle", rule: "Any vehicle",
-    allowed: ["car", "suv", "truck"], capacity: null, src: null, w: 4, h: 3,
+    id: "lot3", name: "Lot 3", place: "Along E Melvin St, behind the hotel building", rule: "Any vehicle",
+    allowed: ["car", "suv", "truck"], capacity: null, src: "/maps/lot-3.webp", w: 1676, h: 848,
     dot: "bg-teal-500", chip: "bg-teal-50 text-teal-700 ring-teal-100",
   },
   {
