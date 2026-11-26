@@ -17,7 +17,7 @@ import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { useRun, useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
-import { Menu, Select } from "@/components/ui/Dropdown";
+import { Menu, Portal, Select } from "@/components/ui/Dropdown";
 import { SortHeader } from "@/components/ui/SortHeader";
 import { SORT_LABELS, loadSort, saveSort, sortRecords, type SortKey } from "@/lib/sort";
 
@@ -248,8 +248,16 @@ function StatTile({ icon, label, value, color, badge, note }: {
 
 function LotGrid({ inside, now }: { inside: ParkingRecord[]; now: number }) {
   const spots = Array.from({ length: LOT_CAPACITY }, (_, i) => inside[i] ?? null);
+  // hover card, drawn on top of the page so it's never cut off at the edges
+  const [hover, setHover] = useState<{ r: ParkingRecord; rect: DOMRect } | null>(null);
+  useEffect(() => {
+    if (!hover) return;
+    const hide = () => setHover(null);
+    window.addEventListener("scroll", hide, true);
+    return () => window.removeEventListener("scroll", hide, true);
+  }, [hover]);
   return (
-    <section className="card overflow-x-clip p-5">
+    <section className="card p-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <SectionTitle icon={<SquareParking />} title="Lot 1 spots" sub={`${inside.length} parked · ${LOT_CAPACITY - Math.min(inside.length, LOT_CAPACITY)} empty`} />
         <div className="flex flex-wrap gap-3 text-xs font-medium text-slate-600">
@@ -262,6 +270,8 @@ function LotGrid({ inside, now }: { inside: ParkingRecord[]; now: number }) {
         {spots.map((r, i) =>
           r ? (
             <Link key={r.id} href={`/cars/${r.id}`}
+              onMouseEnter={(e) => { if (window.matchMedia("(hover: hover)").matches) setHover({ r, rect: e.currentTarget.getBoundingClientRect() }); }}
+              onMouseLeave={() => setHover(null)}
               className={`group relative flex h-16 flex-col items-center justify-center rounded-xl px-1 text-white shadow-sm ring-1 ring-inset ring-white/10 transition duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg ${
                 sameDay(r.checkout_at, new Date(now))
                   ? "bg-gradient-to-b from-amber-400 to-amber-500 hover:shadow-amber-500/30"
@@ -270,12 +280,6 @@ function LotGrid({ inside, now }: { inside: ParkingRecord[]; now: number }) {
               <span className="absolute left-1.5 top-1 text-[9px] font-semibold opacity-60">{i + 1}</span>
               <span className="w-full truncate text-center text-[11px] font-bold leading-tight tracking-wide">{r.license_plate}</span>
               <span className="w-full truncate text-center text-[10px] leading-tight opacity-80">{r.guest_name.split(" ")[0]}</span>
-              {/* hover card */}
-              <span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 hidden w-52 [@media(hover:hover)]:block -translate-x-1/2 translate-y-1 rounded-xl bg-slate-900 p-3 text-left text-xs opacity-0 shadow-xl transition duration-150 group-hover:translate-y-0 group-hover:opacity-100">
-                <span className="block font-semibold text-white">{r.guest_name}</span>
-                <span className="block text-slate-300">{carLabel(r)}</span>
-                <span className="mt-1.5 block text-slate-400">Leaves {fmtDateTime(r.checkout_at)}</span>
-              </span>
             </Link>
           ) : (
             <div key={`empty-${i}`}
@@ -285,7 +289,25 @@ function LotGrid({ inside, now }: { inside: ParkingRecord[]; now: number }) {
           ),
         )}
       </div>
+      {hover && <SpotCard r={hover.r} rect={hover.rect} />}
     </section>
+  );
+}
+
+/** Dark info card above (or below) a hovered spot, kept fully inside the window. */
+function SpotCard({ r, rect }: { r: ParkingRecord; rect: DOMRect }) {
+  const W = 224, GAP = 8, EDGE = 8;
+  const left = Math.min(Math.max(rect.left + rect.width / 2 - W / 2, EDGE), window.innerWidth - W - EDGE);
+  const above = rect.top > 110;
+  return (
+    <Portal>
+      <div role="tooltip" className="pointer-events-none fixed z-[60] animate-pop rounded-xl bg-slate-900 p-3 text-left text-xs shadow-xl"
+        style={{ width: W, left, ...(above ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }) }}>
+        <span className="block font-semibold text-white">{r.guest_name}</span>
+        <span className="block text-slate-300">{carLabel(r)}</span>
+        <span className="mt-1.5 block text-slate-400">Leaves {fmtDateTime(r.checkout_at)}</span>
+      </div>
+    </Portal>
   );
 }
 
