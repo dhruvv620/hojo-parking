@@ -55,7 +55,6 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
     arrival: toLocalInput(record?.arrival_at ?? new Date()),
     futureArrival: toLocalInput(record?.status === "reserved" ? record.arrival_at : nextMorning()),
     days: record?.days ?? 1,
-    fence_told: record?.fence_told ?? false,
     notes: record?.notes ?? "",
     spot: (record?.spot_x != null && record?.spot_y != null
       ? { map: normalizeLot(record.spot_map) ?? recordLot(record) ?? "lot1", x: Number(record.spot_x), y: Number(record.spot_y) }
@@ -151,7 +150,6 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       vehicle_type: f.vehicle_type,
       arrival_at: arrivalIso,
       days,
-      fence_told: chosen ? f.fence_told : false,
       notes: f.notes.trim() || null,
       spot_x: isFuture ? null : f.spot?.x ?? null,
       spot_y: isFuture ? null : f.spot?.y ?? null,
@@ -404,25 +402,6 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
             </div>
           )}
 
-          {lotInfo && (
-            <label className={`mt-4 flex cursor-pointer items-center gap-3 rounded-xl border p-4 transition ${
-              f.fence_told ? "border-emerald-200 bg-emerald-50" : "border-amber-300 bg-amber-50 hover:bg-amber-100/60"}`}>
-              <span className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition ${
-                f.fence_told ? "border-emerald-500 bg-emerald-500 text-white" : "border-amber-400 bg-white"}`}>
-                <input type="checkbox" className="absolute inset-0 cursor-pointer opacity-0" checked={f.fence_told}
-                  onChange={(e) => set("fence_told", e.target.checked)} />
-                {f.fence_told && <Check className="h-4 w-4" strokeWidth={3} />}
-              </span>
-              <span>
-                <span className={`block font-bold ${f.fence_told ? "text-emerald-900" : "text-amber-900"}`}>
-                  Tell the guest: park in {lotInfo.name}, {lotInfo.place}.
-                </span>
-                <span className={`text-sm ${f.fence_told ? "text-emerald-700" : "text-amber-800"}`}>
-                  {f.fence_told ? "Done. Guest has been told." : "Tick when you have told them."}
-                </span>
-              </span>
-            </label>
-          )}
         </section>
       )}
 
