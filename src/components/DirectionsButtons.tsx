@@ -7,17 +7,21 @@ import { directionsLinks, lotById, type LotId } from "@/lib/lots";
 export function DirectionsButtons({ lot, size = "md" }: { lot: LotId; size?: "md" | "lg" }) {
   const l = lotById(lot);
   const links = directionsLinks(lot);
-  if (!l) return null;
+  if (!l || !links) return null;
   return (
     <div>
       <a href={links.google} target="_blank" rel="noopener noreferrer"
         className={`btn-primary w-full ${size === "lg" ? "btn-lg" : ""}`}>
         <Navigation /> Directions to {l.name}
       </a>
-      <a href={links.apple} target="_blank" rel="noopener noreferrer"
-        className="mt-1.5 block text-center text-xs font-semibold text-brand-700 hover:underline">
-        or open in Apple Maps
-      </a>
+      {links.apple ? (
+        <a href={links.apple} target="_blank" rel="noopener noreferrer"
+          className="mt-1.5 block text-center text-xs font-semibold text-brand-700 hover:underline">
+          or open in Apple Maps
+        </a>
+      ) : (
+        <p className="mt-1.5 text-center text-xs text-slate-500">Opens the lot in Google Maps. Tap <b>Directions</b> there.</p>
+      )}
     </div>
   );
 }
