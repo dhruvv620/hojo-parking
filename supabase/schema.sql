@@ -1130,3 +1130,23 @@ revoke all on function public.guest_check_in(text, text, text, text, text, text,
 grant execute on function public.guest_check_in(text, text, text, text, text, text, text, text, text, text, date, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- 11. History paging (same as update-9-history-paging.sql)
+-- When the car left: the early check-out time, or the planned check-out time.
+-- The database keeps it up to date by itself.
+alter table public.parking_records
+  add column if not exists left_at timestamptz
+  generated always as (
+    case
+      when status = 'checked_out' then checked_out_at
+      when status = 'parked' then checkout_at
+    end
+  ) stored;
+
+-- Indexes so each History page loads quickly however many records there are.
+create index if not exists parking_records_left_idx    on public.parking_records (left_at desc, id);
+create index if not exists parking_records_arrival2_idx on public.parking_records (arrival_at desc, id);
+create index if not exists parking_records_name2_idx   on public.parking_records (guest_name, id);
+create index if not exists parking_records_lot_idx     on public.parking_records (lot, arrival_at desc);
+
+notify pgrst, 'reload schema';

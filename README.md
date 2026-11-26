@@ -95,6 +95,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-6-lots-and-guest-form.sql`: Lot 1 / Lot 2 / Lot 3 / Hotel Lot, vehicle type, and the guest QR check-in form.
 - `supabase/update-7-sheet-backup.sql`: automatic backup to a Google Sheet.
 - `supabase/update-8-security.sql`: security hardening: only approved staff can see data, tamper-proof Stay history, guest form limits. See [SECURITY.md](SECURITY.md).
+- `supabase/update-9-history-paging.sql`: fast History paging and sorting by "Left" (the page works without it, but run it).
 
 ## Changing the lot size
 
