@@ -46,5 +46,5 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Skip the login check for static files and the lot pictures (guests need to see them).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|maps/|.*\\.(?:png|jpg|jpeg|webp|svg|ico)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|maps/|.*\\.(?:png|jpg|jpeg|webp|svg|ico)$).*)"],
 };

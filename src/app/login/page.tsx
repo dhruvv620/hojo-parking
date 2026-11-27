@@ -34,14 +34,12 @@ export default function LoginPage() {
       <div className="relative hidden overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-12 text-white lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 ring-1 ring-white/20 backdrop-blur">
-            <SquareParking className="h-6 w-6" />
+        <div className="relative flex items-center gap-4">
+          <span className="rounded-2xl bg-white px-4 py-3 shadow-lg shadow-brand-900/20">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-96.png" alt={HOTEL_NAME} width={128} height={50} className="h-12 w-auto" />
           </span>
-          <div className="leading-tight">
-            <div className="font-bold">{HOTEL_NAME}</div>
-            <div className="text-sm text-brand-100">{APP_NAME}</div>
-          </div>
+          <div className="text-lg font-semibold text-brand-50">{APP_NAME}</div>
         </div>
         <div className="relative mt-auto max-w-md">
           <h2 className="text-4xl font-bold leading-tight tracking-tight">Every car in the lot, at a glance.</h2>
@@ -57,9 +55,8 @@ export default function LoginPage() {
       <div className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm animate-rise">
           <div className="mb-8 lg:hidden">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-lg shadow-brand-600/30">
-              <SquareParking className="h-6 w-6" />
-            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-96.png" alt={HOTEL_NAME} width={140} height={55} className="h-14 w-auto" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome back</h1>
           <p className="mt-1.5 text-slate-500">Sign in to manage {HOTEL_NAME} parking.</p>

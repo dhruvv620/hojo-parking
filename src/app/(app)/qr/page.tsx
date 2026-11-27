@@ -67,7 +67,8 @@ export default function QrPage() {
 
           {/* the printable sign */}
           <div className="card mx-auto max-w-xl p-8 text-center print:max-w-none print:border-0 print:shadow-none sm:p-10">
-            <div className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">{HOTEL_NAME}</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt={HOTEL_NAME} className="mx-auto h-20 w-auto" />
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Parking check-in</h2>
             <p className="mt-2 flex items-center justify-center gap-2 text-lg text-slate-600">
               <ScanLine className="h-5 w-5" /> Scan with your phone camera

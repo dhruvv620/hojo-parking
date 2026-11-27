@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronDown, DatabaseBackup, Users, History, LayoutDashboard, LogOut, Plus, QrCode, SquareParking } from "lucide-react";
+import { ChevronDown, DatabaseBackup, Users, History, LayoutDashboard, LogOut, Plus, QrCode } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
 import { Menu } from "./ui/Dropdown";
@@ -37,13 +37,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 print:hidden border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
-        <Link href="/" className="group flex items-center gap-2.5 rounded-xl pr-1">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30 transition-transform duration-200 group-hover:scale-105">
-            <SquareParking className="h-5 w-5" />
-          </span>
-          <span className="hidden leading-tight md:block">
-            <span className="block text-sm font-bold tracking-tight">{HOTEL_NAME}</span>
-            <span className="block text-xs text-slate-500">Parking Manager</span>
+        <Link href="/" className="group flex shrink-0 items-center gap-3 rounded-xl pr-1" aria-label={`${HOTEL_NAME} Parking Manager, home`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-96.png" alt={HOTEL_NAME} width={92} height={36} className="h-9 w-auto transition-transform duration-200 group-hover:scale-[1.03]" />
+          <span className="hidden border-l border-slate-200 pl-3 text-xs font-semibold leading-tight text-slate-500 lg:block">
+            Parking<br />Manager
           </span>
         </Link>
 

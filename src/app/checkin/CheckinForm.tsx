@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
-  ArrowRight, CalendarCheck, Car, CircleAlert, CircleCheck, Hash, LoaderCircle, MapPin, Phone, RectangleHorizontal,
+  ArrowRight, CalendarCheck, CircleAlert, CircleCheck, Hash, LoaderCircle, MapPin, Phone, RectangleHorizontal,
   SquareParking, TriangleAlert, UserRound,
 } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -347,12 +347,10 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main className="mx-auto min-h-screen max-w-lg px-4 pb-8 pt-6">
       <header className="flex items-center gap-3">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30">
-          <Car className="h-6 w-6" />
-        </span>
-        <div className="leading-tight">
-          <div className="font-bold">{HOTEL_NAME}</div>
-          <div className="text-sm text-slate-500">Parking check-in</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-96.png" alt={HOTEL_NAME} width={112} height={44} className="h-11 w-auto" />
+        <div className="border-l border-slate-200 pl-3 text-sm font-semibold leading-tight text-slate-500">
+          Parking<br />check-in
         </div>
       </header>
       {children}
