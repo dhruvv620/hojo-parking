@@ -7,6 +7,7 @@ import { fmtDateTime } from "@/lib/time";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
 import { Avatar, EmptyState, SectionTitle } from "@/components/ui/bits";
+import { DevicesSection } from "@/components/DevicesSection";
 
 type Row = { user_id: string; email: string; approved: boolean; created_at: string; last_sign_in_at: string | null; added_by: string | null };
 
@@ -97,6 +98,8 @@ export default function StaffPage() {
           </section>
         </>
       )}
+
+      <DevicesSection />
     </div>
   );
 }

@@ -147,6 +147,7 @@ export function StayHistory({ recordId, refreshKey, onUnpaidCount }: {
                   <div className="mt-1.5 text-xs text-slate-400">
                     {fmtDateTime(c.changed_at)}
                     {c.changed_by_email && <> · {c.changed_by_email}</>}
+                    {c.changed_by_device && <> · on {c.changed_by_device}</>}
                   </div>
                 </div>
               </li>

@@ -77,6 +77,15 @@ Open the link, log in with a user from step 3, and you're ready.
 
 Tip: on a tablet or phone, open the link and use "Add to Home Screen" so it opens like an app.
 
+## Devices
+
+Account menu → **Staff** → **Devices** lists every phone and computer that has used the app: browser and system, country and internet address, **At hotel / Outside hotel**, first used, last active. New devices are tagged **New** and announced on the dashboard.
+
+- **Remove device:** that device is signed out within about a minute and blocked (it sees "This device was removed"). **Restore** undoes it. You can't remove the device you're using.
+- **This is the hotel network:** press once on a front-desk computer so other devices show "At hotel" or "Outside hotel".
+- **Rename** (pencil) a device, e.g. "Front desk PC". The Stay history shows which device made each change.
+- If someone clears their browser or uses a private window, they appear as a new device (tagged **New**). To stop a person completely, change the shared password.
+
 ## Backup
 
 Open the account menu (top right) → **Backup**:
@@ -100,6 +109,7 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-10-lot-full-switches.sql`: the **Lots open for guests** switches on the dashboard.
 - `supabase/update-11-guest-lot-choice.sql`: guests choose between the lots they may use (cars & SUVs: Lot 1 or Lot 3; trucks: Lot 2 or Lot 3).
 - `supabase/update-12-hide-spot-count.sql`: the guest page no longer receives Lot 1's spot count.
+- `supabase/update-13-devices.sql`: device log and **Remove device** (account menu → Staff → Devices).
 
 ## Changing the lot size
 

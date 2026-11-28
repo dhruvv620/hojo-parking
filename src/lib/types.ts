@@ -94,6 +94,7 @@ export interface StayChange {
   record_id: string;
   changed_at: string;
   changed_by_email: string | null;
+  changed_by_device?: string | null;
   kind: StayChangeKind;
   old_arrival_at: string | null;
   old_days: number | null;
@@ -108,4 +109,21 @@ export interface StayChange {
   amount: number | null;
   note: string | null;
   paid_marked_at: string | null;
+}
+
+/** One phone/computer that has used the app (Staff page > Devices). */
+export interface Device {
+  id: string;
+  device_key: string;
+  user_email: string | null;
+  name: string | null;
+  label: string | null;
+  last_ip: string | null;
+  first_ip: string | null;
+  country: string | null;
+  first_seen: string;
+  last_seen: string;
+  sign_ins: number;
+  removed_at: string | null;
+  removed_by: string | null;
 }

@@ -15,6 +15,7 @@ import { DAY, fmtDateTime, fmtDay, fmtDuration, fmtTime, sameDay, startOfDay } f
 import { checkOutNow, markArrived, moveToLot } from "@/lib/actions";
 import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
+import { NewDeviceNotice } from "@/components/NewDeviceNotice";
 import { useRun, useToast } from "@/components/Toast";
 import { useLotsFull } from "@/lib/useLotsFull";
 import { useConfirm } from "@/components/ui/Confirm";
@@ -73,6 +74,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader now={p.now} />
+      <NewDeviceNotice />
 
       {p.error && (
         <div className="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
