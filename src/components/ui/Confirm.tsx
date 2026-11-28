@@ -53,7 +53,7 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       {pending && (
         <div className="fixed inset-0 z-[70] flex items-end justify-center p-4 sm:items-center" role="presentation">
-          <div className="absolute inset-0 animate-fade bg-slate-900/40 backdrop-blur-[2px]" onClick={() => close(false)} />
+          <div className="fixed-colors absolute inset-0 animate-fade bg-slate-900/40 backdrop-blur-[2px]" onClick={() => close(false)} />
           <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title"
             className="relative w-full max-w-md animate-dialog rounded-2xl bg-white p-6 shadow-2xl">
             <div className="flex gap-4">

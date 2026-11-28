@@ -376,10 +376,185 @@ body {
   }
 }
 
+/* =====================================================================
+   Dark mode. Turned on by data-theme="dark" on <html> (see ThemeScript).
+   Only on screens: printing always uses the light colors.
+   ===================================================================== */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #121b2d;
+    --color-brand-50: color-mix(in srgb, #3b6ef5 13%, #121b2d);
+    --color-brand-100: color-mix(in srgb, #3b6ef5 20%, #121b2d);
+    --color-brand-200: color-mix(in srgb, #3b6ef5 30%, #121b2d);
+    --color-brand-300: color-mix(in srgb, #3b6ef5 45%, #121b2d);
+    --color-brand-700: color-mix(in srgb, #6090fa 85%, #fff);
+    --color-brand-800: color-mix(in srgb, #6090fa 65%, #fff);
+    --color-brand-900: color-mix(in srgb, #6090fa 50%, #fff);
+    --color-brand-950: color-mix(in srgb, #6090fa 35%, #fff);
+    --color-emerald-50: color-mix(in srgb, #10b981 13%, #121b2d);
+    --color-emerald-100: color-mix(in srgb, #10b981 20%, #121b2d);
+    --color-emerald-200: color-mix(in srgb, #10b981 30%, #121b2d);
+    --color-emerald-300: color-mix(in srgb, #10b981 45%, #121b2d);
+    --color-emerald-700: color-mix(in srgb, #34d399 85%, #fff);
+    --color-emerald-800: color-mix(in srgb, #34d399 65%, #fff);
+    --color-emerald-900: color-mix(in srgb, #34d399 50%, #fff);
+    --color-emerald-950: color-mix(in srgb, #34d399 35%, #fff);
+    --color-amber-50: color-mix(in srgb, #f59e0b 13%, #121b2d);
+    --color-amber-100: color-mix(in srgb, #f59e0b 20%, #121b2d);
+    --color-amber-200: color-mix(in srgb, #f59e0b 30%, #121b2d);
+    --color-amber-300: color-mix(in srgb, #f59e0b 45%, #121b2d);
+    --color-amber-700: color-mix(in srgb, #fbbf24 85%, #fff);
+    --color-amber-800: color-mix(in srgb, #fbbf24 65%, #fff);
+    --color-amber-900: color-mix(in srgb, #fbbf24 50%, #fff);
+    --color-amber-950: color-mix(in srgb, #fbbf24 35%, #fff);
+    --color-red-50: color-mix(in srgb, #ef4444 13%, #121b2d);
+    --color-red-100: color-mix(in srgb, #ef4444 20%, #121b2d);
+    --color-red-200: color-mix(in srgb, #ef4444 30%, #121b2d);
+    --color-red-300: color-mix(in srgb, #ef4444 45%, #121b2d);
+    --color-red-700: color-mix(in srgb, #f87171 85%, #fff);
+    --color-red-800: color-mix(in srgb, #f87171 65%, #fff);
+    --color-red-900: color-mix(in srgb, #f87171 50%, #fff);
+    --color-red-950: color-mix(in srgb, #f87171 35%, #fff);
+    --color-violet-50: color-mix(in srgb, #8b5cf6 13%, #121b2d);
+    --color-violet-100: color-mix(in srgb, #8b5cf6 20%, #121b2d);
+    --color-violet-200: color-mix(in srgb, #8b5cf6 30%, #121b2d);
+    --color-violet-300: color-mix(in srgb, #8b5cf6 45%, #121b2d);
+    --color-violet-700: color-mix(in srgb, #a78bfa 85%, #fff);
+    --color-violet-800: color-mix(in srgb, #a78bfa 65%, #fff);
+    --color-violet-900: color-mix(in srgb, #a78bfa 50%, #fff);
+    --color-violet-950: color-mix(in srgb, #a78bfa 35%, #fff);
+    --color-yellow-50: color-mix(in srgb, #eab308 13%, #121b2d);
+    --color-yellow-100: color-mix(in srgb, #eab308 20%, #121b2d);
+    --color-yellow-200: color-mix(in srgb, #eab308 30%, #121b2d);
+    --color-yellow-300: color-mix(in srgb, #eab308 45%, #121b2d);
+    --color-yellow-700: color-mix(in srgb, #facc15 85%, #fff);
+    --color-yellow-800: color-mix(in srgb, #facc15 65%, #fff);
+    --color-yellow-900: color-mix(in srgb, #facc15 50%, #fff);
+    --color-yellow-950: color-mix(in srgb, #facc15 35%, #fff);
+    --color-teal-50: color-mix(in srgb, #14b8a6 13%, #121b2d);
+    --color-teal-100: color-mix(in srgb, #14b8a6 20%, #121b2d);
+    --color-teal-200: color-mix(in srgb, #14b8a6 30%, #121b2d);
+    --color-teal-300: color-mix(in srgb, #14b8a6 45%, #121b2d);
+    --color-teal-700: color-mix(in srgb, #2dd4bf 85%, #fff);
+    --color-teal-800: color-mix(in srgb, #2dd4bf 65%, #fff);
+    --color-teal-900: color-mix(in srgb, #2dd4bf 50%, #fff);
+    --color-teal-950: color-mix(in srgb, #2dd4bf 35%, #fff);
+    --color-sky-50: color-mix(in srgb, #0ea5e9 13%, #121b2d);
+    --color-sky-100: color-mix(in srgb, #0ea5e9 20%, #121b2d);
+    --color-sky-200: color-mix(in srgb, #0ea5e9 30%, #121b2d);
+    --color-sky-300: color-mix(in srgb, #0ea5e9 45%, #121b2d);
+    --color-sky-700: color-mix(in srgb, #38bdf8 85%, #fff);
+    --color-sky-800: color-mix(in srgb, #38bdf8 65%, #fff);
+    --color-sky-900: color-mix(in srgb, #38bdf8 50%, #fff);
+    --color-sky-950: color-mix(in srgb, #38bdf8 35%, #fff);
+    --color-orange-50: color-mix(in srgb, #f97316 13%, #121b2d);
+    --color-orange-100: color-mix(in srgb, #f97316 20%, #121b2d);
+    --color-orange-200: color-mix(in srgb, #f97316 30%, #121b2d);
+    --color-orange-300: color-mix(in srgb, #f97316 45%, #121b2d);
+    --color-orange-700: color-mix(in srgb, #fb923c 85%, #fff);
+    --color-orange-800: color-mix(in srgb, #fb923c 65%, #fff);
+    --color-orange-900: color-mix(in srgb, #fb923c 50%, #fff);
+    --color-orange-950: color-mix(in srgb, #fb923c 35%, #fff);
+    --color-rose-50: color-mix(in srgb, #f43f5e 13%, #121b2d);
+    --color-rose-100: color-mix(in srgb, #f43f5e 20%, #121b2d);
+    --color-rose-200: color-mix(in srgb, #f43f5e 30%, #121b2d);
+    --color-rose-300: color-mix(in srgb, #f43f5e 45%, #121b2d);
+    --color-rose-700: color-mix(in srgb, #fb7185 85%, #fff);
+    --color-rose-800: color-mix(in srgb, #fb7185 65%, #fff);
+    --color-rose-900: color-mix(in srgb, #fb7185 50%, #fff);
+    --color-rose-950: color-mix(in srgb, #fb7185 35%, #fff);
+    --color-slate-50: #172135;
+    --color-slate-100: #1c2639;
+    --color-slate-200: #283447;
+    --color-slate-300: #3a475c;
+    --color-slate-400: #6f7e95;
+    --color-slate-500: #8a97ab;
+    --color-slate-600: #a7b3c4;
+    --color-slate-700: #c8d1dd;
+    --color-slate-800: #e2e8f0;
+    --color-slate-900: #eef2f7;
+    --color-slate-950: #f8fafc;
+  }
+
+  /* Keeps the original colors inside: dark tooltips, step numbers, the login picture */
+  html[data-theme="dark"] .fixed-colors {
+    --color-slate-50: #f8fafc; --color-slate-100: #f1f5f9; --color-slate-200: #e2e8f0; --color-slate-300: #cbd5e1;
+    --color-slate-400: #94a3b8; --color-slate-500: #64748b; --color-slate-600: #475569; --color-slate-700: #334155;
+    --color-slate-800: #1e293b; --color-slate-900: #0f172a; --color-slate-950: #020617;
+    --color-brand-50: #eef4ff; --color-brand-100: #dbe6ff; --color-brand-200: #bfd3fe; --color-brand-300: #93b4fd;
+    --color-brand-700: #1d43c4; --color-brand-800: #1e3a9e; --color-brand-900: #1e347d;
+  }
+
+  html[data-theme="dark"],
+  html[data-theme="dark"] body {
+    color: #e2e8f0;
+    background-color: #0a1120;
+  }
+  html[data-theme="dark"] body {
+    background-image: radial-gradient(1200px 400px at 50% -120px, rgb(59 110 245 / 0.12), transparent 70%);
+  }
+  html[data-theme="dark"] * { scrollbar-color: #334155 transparent; }
+  html[data-theme="dark"] ::selection { background: rgb(59 110 245 / 0.35); }
+
+  /* white surfaces */
+  html[data-theme="dark"] .bg-white:not(.fixed-colors .bg-white) { background-color: var(--surface); }
+  html[data-theme="dark"] .bg-white\/80 { background-color: rgb(18 27 45 / 0.8); }
+  html[data-theme="dark"] .bg-white\/90 { background-color: rgb(18 27 45 / 0.9); }
+  html[data-theme="dark"] .bg-white\/95 { background-color: rgb(18 27 45 / 0.95); }
+  html[data-theme="dark"] .ring-white { --tw-ring-color: var(--surface); }
+  html[data-theme="dark"] .to-white { --tw-gradient-to: var(--surface); }
+
+  html[data-theme="dark"] .card {
+    border-color: #223047;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  }
+  html[data-theme="dark"] .btn-primary { border-color: #1d43c4; }
+  html[data-theme="dark"] .btn-secondary { color: #e2e8f0; background: #1a2438; border-color: #2c3a52; box-shadow: none; }
+  html[data-theme="dark"] .btn-secondary:hover:not(:disabled) { background: #222e45; border-color: #3a4a66; }
+  html[data-theme="dark"] .btn-ghost { color: #a7b3c4; }
+  html[data-theme="dark"] .btn-ghost:hover:not(:disabled) { color: #f1f5f9; background: #1c2639; }
+  html[data-theme="dark"] .btn-danger { color: #fca5a5; background: #1a2438; border-color: #5b2530; }
+  html[data-theme="dark"] .btn-danger:hover:not(:disabled) { background: #2a1a24; border-color: #7f2d3a; }
+  html[data-theme="dark"] .label { color: #c8d1dd; }
+  html[data-theme="dark"] .input { border-color: #2c3a52; background: #0f1727; color: #f1f5f9; box-shadow: none; }
+  html[data-theme="dark"] .input::placeholder { color: #5f6e85; }
+  html[data-theme="dark"] .input:hover { border-color: #3a4a66; }
+  html[data-theme="dark"] .input:focus { border-color: var(--color-brand-500); box-shadow: 0 0 0 4px rgb(59 110 245 / 0.25); }
+  html[data-theme="dark"] .input-readonly { border-color: #2c3a52; background: #172135; color: #a7b3c4; }
+  html[data-theme="dark"] .choice { border-color: #2c3a52; background: #172135; }
+  html[data-theme="dark"] .choice:hover:not(:disabled) { border-color: #3a4a66; background: #1c2639; }
+  html[data-theme="dark"] .choice[data-active="true"] { border-color: var(--color-brand-500); background: rgb(59 110 245 / 0.16); }
+  html[data-theme="dark"] .menu-panel { border-color: #2c3a52; background: rgb(22 32 52 / 0.98); box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6); }
+  html[data-theme="dark"] .menu-item { color: #e2e8f0; }
+  html[data-theme="dark"] .menu-item svg { color: #8a97ab; }
+  html[data-theme="dark"] .menu-item[data-active="true"] { background: #222e45; }
+  html[data-theme="dark"] .menu-item[data-danger="true"] { color: #fca5a5; }
+  html[data-theme="dark"] .menu-item[data-danger="true"] svg { color: #f87171; }
+  html[data-theme="dark"] .menu-item[data-danger="true"][data-active="true"] { background: #2a1a24; }
+  html[data-theme="dark"] .skeleton { background: linear-gradient(90deg, #172135 25%, #1f2a40 50%, #172135 75%); background-size: 200% 100%; }
+  html[data-theme="dark"] .toast { border-color: #2c3a52; background: #172135; box-shadow: 0 12px 32px -8px rgb(0 0 0 / 0.6); }
+
+  /* the logo has dark letters: put it on a white pill */
+  html[data-theme="dark"] .logo-pill { background: #fff; border-radius: 0.625rem; padding: 0.25rem 0.5rem; box-sizing: content-box; }
+  /* map pictures: soften the glare a little */
+  html[data-theme="dark"] .map-image { filter: brightness(0.9); }
+}
+
 /* Printing (e.g. the QR sign): plain white page, no shadows. */
 @media print {
   html,
   body {
     background: #fff !important;
   }
+}
+
+/* Undo toast: thin bar that runs out in 10 seconds */
+@keyframes undo-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+.undo-timer {
+  animation: undo-shrink linear forwards;
 }

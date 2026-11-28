@@ -32,6 +32,9 @@ export interface ParkingRecord {
   /** lot1 (fenced, counts toward the limit), lot2, lot3 or hotel. */
   lot: string | null;
   vehicle_type: "car" | "suv" | "truck" | null;
+  /** What the guest paid for the stay (shown on the receipt). */
+  amount_paid?: number | null;
+  payment_method?: PaymentMethod | null;
   created_at: string;
   updated_at: string;
 }
@@ -86,7 +89,7 @@ export type Payment = "paid" | "unpaid" | "free";
 
 export type StayChangeKind =
   | "created" | "reserved" | "arrived" | "extended" | "shortened" | "dates_changed" | "checked_out"
-  | "reopened" | "cancelled" | "restored" | "moved" | "edited" | "note";
+  | "reopened" | "cancelled" | "restored" | "moved" | "edited" | "note" | "undone";
 
 /** One row of a customer's Stay history. */
 export interface StayChange {
@@ -127,3 +130,11 @@ export interface Device {
   removed_at: string | null;
   removed_by: string | null;
 }
+
+export type PaymentMethod = "cash" | "card" | "online" | "other";
+export const PAYMENT_METHODS: { id: PaymentMethod; label: string }[] = [
+  { id: "cash", label: "Cash" },
+  { id: "card", label: "Card" },
+  { id: "online", label: "Online" },
+  { id: "other", label: "Other" },
+];

@@ -43,11 +43,11 @@ export function MapCanvas({ lot, pin, onPick, others = [], big = false }: {
 
   return (
     <div ref={ref} onClick={pick} role={onPick ? "button" : "img"} aria-label={`${lot.name} map`}
-      className={`relative w-full select-none overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200 ${onPick ? "cursor-crosshair" : ""}`}
+      className={`fixed-colors relative w-full select-none overflow-hidden rounded-xl bg-slate-200 ring-1 ring-slate-200 ${onPick ? "cursor-crosshair" : ""}`}
       style={{ aspectRatio: `${lot.w} / ${lot.h}` }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img key={lot.id} src={lot.src} alt={`Top-down view of ${lot.name}`} draggable={false}
-        className="pointer-events-none absolute inset-0 h-full w-full animate-fade object-cover" />
+        className="pointer-events-none map-image absolute inset-0 h-full w-full animate-fade object-cover" />
 
       {dots.map((o) => (
         <span key={o.id} className="absolute z-10 -translate-x-1/2 -translate-y-1/2"

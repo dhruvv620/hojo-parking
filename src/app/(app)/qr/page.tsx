@@ -5,14 +5,17 @@ import QRCode from "qrcode";
 import { Copy, ExternalLink, Printer, RefreshCw, ScanLine } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
+import { WORDS } from "@/app/checkin/i18n";
 import { LOTS } from "@/lib/lots";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
+import { pinResultError, usePin } from "@/components/ui/Pin";
 
 /** Printable sign with the QR code guests scan to check themselves in. */
 export default function QrPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const askPin = usePin();
   const [token, setToken] = useState<string | null>(null);
   const [svg, setSvg] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,9 +43,12 @@ export default function QrPage() {
       tone: "danger",
     });
     if (!ok) return;
-    const { data, error } = await supabaseBrowser().rpc("rotate_checkin_token");
-    if (error) toast(error.message, "error");
-    else { setToken(data as string); toast("New QR code ready. Print it and replace the old sign."); }
+    const pin = await askPin("Make a new QR code");
+    if (pin === null) return;
+    const { data, error } = await supabaseBrowser().rpc("rotate_checkin_token", { p_pin: pin });
+    const err = pinResultError(data, error);
+    if (err) toast(err, "error");
+    else { setToken((data as { token: string }).token); toast("New QR code ready. Print it and replace the old sign."); }
   }
 
   return (
@@ -68,11 +74,13 @@ export default function QrPage() {
           {/* the printable sign */}
           <div className="card mx-auto max-w-xl p-8 text-center print:max-w-none print:border-0 print:shadow-none sm:p-10">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt={HOTEL_NAME} className="mx-auto h-20 w-auto" />
+            <img src="/logo.png" alt={HOTEL_NAME} className="logo-pill mx-auto h-20 w-auto" />
             <h2 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Parking check-in</h2>
-            <p className="mt-2 flex items-center justify-center gap-2 text-lg text-slate-600">
+            <p className="text-xl font-bold text-slate-500 sm:text-2xl">Registro de estacionamiento</p>
+            <p className="mt-3 flex items-center justify-center gap-2 text-lg text-slate-600">
               <ScanLine className="h-5 w-5" /> Scan with your phone camera
             </p>
+            <p className="text-base italic text-slate-500">Escanee con la cámara de su teléfono</p>
             <div className="mx-auto mt-6 w-64 max-w-full sm:w-72 [&>svg]:h-auto [&>svg]:w-full">
               {svg
                 // eslint-disable-next-line @next/next/no-img-element
@@ -84,11 +92,16 @@ export default function QrPage() {
                 <li key={l.id} className="flex items-center gap-3 rounded-xl border border-slate-200 px-4 py-2.5">
                   <span className={`h-3 w-3 shrink-0 rounded-full ${l.dot}`} />
                   <b className="w-14 shrink-0">{l.name}</b>
-                  <span className="text-slate-600">{l.rule}</span>
+                  <span className="leading-tight text-slate-600">
+                    {l.rule}
+                    <span className="block text-sm italic text-slate-400">{WORDS.es.lotRule[l.id]}</span>
+                  </span>
                 </li>
               ))}
             </ul>
             <p className="mt-6 text-sm text-slate-500">Takes about a minute. Need help? Ask the front desk.</p>
+            <p className="text-sm italic text-slate-400">Toma como un minuto. ¿Necesita ayuda? Pregunte en la recepción.</p>
+            <p className="mt-2 text-xs text-slate-400">The form is in English and Spanish · El formulario está en inglés y español</p>
           </div>
         </>
       )}

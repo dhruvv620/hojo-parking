@@ -70,9 +70,16 @@ export function restoreReservation(r: ParkingRecord) {
   return update(r.id, { status: "reserved" });
 }
 
-export async function deleteRecord(r: ParkingRecord): Promise<Result> {
-  const { error } = await table().delete().eq("id", r.id);
-  return error ? { ok: false, error: error.message } : { ok: true };
+/** Delete a record for good. Needs the manager PIN ("" when no PIN is set). */
+export async function deleteRecord(r: ParkingRecord, pin: string): Promise<Result> {
+  const { data, error } = await supabaseBrowser().rpc("delete_record", { p_id: r.id, p_pin: pin });
+  if (error && /delete_record|schema cache|function/i.test(error.message)) {
+    // before update 14: delete directly as before
+    const old = await table().delete().eq("id", r.id);
+    return old.error ? { ok: false, error: old.error.message } : { ok: true };
+  }
+  const err = error?.message ?? ((data as { ok: boolean; error?: string })?.ok === false ? (data as { error?: string }).error ?? "Could not delete." : null);
+  return err ? { ok: false, error: err } : { ok: true };
 }
 
 /**
@@ -91,6 +98,28 @@ export function updateStay(
     change_payment: change.payment,
     change_amount: change.amount,
   });
+}
+
+/**
+ * Put a record back the way it was before the last button (the Undo on the
+ * toast). Shows up in Stay history with the note "Undo".
+ * `voidPayment`: the change being undone logged a payment, so clear it.
+ */
+export async function undoTo(before: ParkingRecord, opts?: { voidPayment?: boolean }): Promise<Result> {
+  if (opts?.voidPayment) {
+    // update 14 adds this; before that, the old payment line just stays
+    await supabaseBrowser().rpc("void_last_payment", { p_record: before.id });
+  }
+  const res = await update(before.id, {
+    status: before.status,
+    arrival_at: before.arrival_at,
+    days: before.days,
+    lot: before.lot,
+    location: before.location,
+    change_note: "Undo",
+  });
+  if (!res.ok && isLotFullError(res.error)) return { ok: false, error: `Could not undo: ${lotName("lot1")} is full now.` };
+  return res;
 }
 
 /** Mark a logged unpaid change as paid. */

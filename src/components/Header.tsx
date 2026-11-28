@@ -8,6 +8,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { HOTEL_NAME } from "@/lib/config";
 import { Menu } from "./ui/Dropdown";
 import { useConfirm } from "./ui/Confirm";
+import { ThemeSwitch } from "./ThemeSwitch";
 
 const links = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -39,7 +40,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-2 px-4 sm:gap-4 sm:px-6">
         <Link href="/" className="group flex shrink-0 items-center gap-3 rounded-xl pr-1" aria-label={`${HOTEL_NAME} Parking Manager, home`}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-96.png" alt={HOTEL_NAME} width={92} height={36} className="h-9 w-auto transition-transform duration-200 group-hover:scale-[1.03]" />
+          <img src="/logo-96.png" alt={HOTEL_NAME} width={92} height={36} className="logo-pill h-9 w-auto transition-transform duration-200 group-hover:scale-[1.03]" />
           <span className="hidden border-l border-slate-200 pl-3 text-xs font-semibold leading-tight text-slate-500 lg:block">
             Parking<br />Manager
           </span>
@@ -73,6 +74,7 @@ export function Header() {
               <div className="mb-1 border-b border-slate-100 px-2.5 pb-2.5 pt-1.5">
                 <div className="text-xs text-slate-500">Signed in as</div>
                 <div className="truncate text-sm font-semibold text-slate-900">{email ?? "..."}</div>
+                <ThemeSwitch />
               </div>
             }
             items={[
@@ -82,7 +84,7 @@ export function Header() {
               { label: "Sign out", icon: <LogOut />, onSelect: signOut, danger: true, divider: true },
             ]}
           >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-bold text-white">
+            <span className="flex h-8 w-8 items-center justify-center fixed-colors rounded-full bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-bold text-white">
               {initial}
             </span>
             <ChevronDown className="hidden text-slate-400 sm:block" />

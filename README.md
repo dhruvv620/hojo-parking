@@ -110,6 +110,8 @@ If you set up the database before an update was released, run the matching file 
 - `supabase/update-11-guest-lot-choice.sql`: guests choose between the lots they may use (cars & SUVs: Lot 1 or Lot 3; trucks: Lot 2 or Lot 3).
 - `supabase/update-12-hide-spot-count.sql`: the guest page no longer receives Lot 1's spot count.
 - `supabase/update-13-devices.sql`: device log and **Remove device** (account menu → Staff → Devices).
+- `supabase/update-14-pin-and-payments.sql`: **Manager PIN** for risky actions (set it under account menu → Staff), **Amount paid / Paid by** on each stay for the printable receipt, and the **Undo** history entry. Forgot the PIN? Run this in the Supabase SQL Editor, then set a new one:
+  `update public.app_settings set value = '' where key = 'manager_pin';`
 
 ## Changing the lot size
 

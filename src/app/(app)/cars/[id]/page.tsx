@@ -10,13 +10,14 @@ import { useRun, useToast } from "@/components/Toast";
 import { carLabel, liveStatus, pinsOf, type LiveStatus, type ParkingRecord } from "@/lib/types";
 import { fmtDateTime, fmtDuration } from "@/lib/time";
 import { useConfirm } from "@/components/ui/Confirm";
+import { usePin } from "@/components/ui/Pin";
 import { Menu } from "@/components/ui/Dropdown";
 import { Avatar, EmptyState, LotChip, Plate, VehicleIcon } from "@/components/ui/bits";
 import { recordLot } from "@/lib/lots";
 import { StayHistory } from "@/components/StayHistory";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
-import { ArrowLeft, CalendarRange, CalendarX2, Clock, Ellipsis, LogIn, LogOut, SearchX, Trash2, Undo2 } from "lucide-react";
-import { cancelReservation, checkOutNow, deleteRecord, markArrived, restoreReservation } from "@/lib/actions";
+import { ArrowLeft, CalendarRange, CalendarX2, Clock, Ellipsis, LogIn, LogOut, Receipt, SearchX, Trash2, Undo2 } from "lucide-react";
+import { cancelReservation, checkOutNow, deleteRecord, markArrived, restoreReservation, undoTo } from "@/lib/actions";
 
 const STATUS: Record<LiveStatus, { text: string; cls: string; dot: string }> = {
   upcoming: { text: "Upcoming reservation", cls: "bg-violet-50 text-violet-700", dot: "bg-violet-500" },
@@ -40,6 +41,7 @@ export default function EditCarPage() {
   const toast = useToast();
   const run = useRun();
   const confirm = useConfirm();
+  const askPin = usePin();
   const lot = useParking();
   const [record, setRecord] = useState<ParkingRecord | null>(null);
   const [missing, setMissing] = useState(false);
@@ -78,20 +80,24 @@ export default function EditCarPage() {
 
   async function checkout() {
     if (await confirm({ title: `Check out ${r.guest_name}?`, message: "The spot frees up right away.", confirmText: "Check out", icon: "checkout" }))
-      act(checkOutNow(r), "Checked out. Spot is free.");
+      act(checkOutNow(r), "Checked out. Spot is free.", true);
   }
   async function cancel() {
     if (await confirm({ title: "Cancel this reservation?", message: "You can restore it later if the guest still comes.", confirmText: "Cancel reservation", cancelText: "Keep it", tone: "danger" }))
-      act(cancelReservation(r), "Reservation cancelled.");
+      act(cancelReservation(r), "Reservation cancelled.", true);
   }
   async function remove() {
     if (!(await confirm({ title: "Delete this record for good?", message: <>{r.guest_name}&apos;s record will be removed from History too. This cannot be undone.</>, confirmText: "Delete", tone: "danger" }))) return;
-    const res = await deleteRecord(r);
+    const pin = await askPin(`Delete ${r.guest_name}'s record`);
+    if (pin === null) return;
+    const res = await deleteRecord(r, pin);
     if (res.ok) { toast("Record deleted."); router.push("/"); }
     else toast(res.error, "error");
   }
-  const act = async (p: ReturnType<typeof checkOutNow>, msg: string) => {
-    if (await run(p, msg)) load();
+  /** Runs a button's action; with `undoable`, the toast gets a 10-second Undo. */
+  const act = async (p: ReturnType<typeof checkOutNow>, msg: string, undoable = false) => {
+    const before = r;
+    if (await run(p, msg, undoable ? { undo: () => undoTo(before), after: load } : undefined)) load();
   };
 
   return (
@@ -125,6 +131,7 @@ export default function EditCarPage() {
               )}
             </div>
           </div>
+          <Link href={`/cars/${record.id}/receipt`} className="btn-secondary"><Receipt /> Receipt</Link>
           <Menu label="More" triggerClassName="btn-secondary btn-icon" items={[
             { label: "Delete record", icon: <Trash2 />, danger: true, onSelect: remove },
           ]}>
@@ -139,7 +146,7 @@ export default function EditCarPage() {
               <span className="mr-auto text-sm text-slate-600">Expected {fmtDateTime(record.arrival_at)}</span>
               <button className="btn-secondary" onClick={cancel}><CalendarX2 /> Cancel reservation</button>
               <button className="btn-secondary" onClick={() => setStayDialog(0)}><CalendarRange /> Update stay</button>
-              <button className="btn-primary" onClick={() => act(markArrived(record, lot.isFull), "Checked in. Paid days start now.")}>
+              <button className="btn-primary" onClick={() => act(markArrived(record, lot.isFull), "Checked in. Paid days start now.", true)}>
                 <LogIn /> Guest arrived
               </button>
             </>

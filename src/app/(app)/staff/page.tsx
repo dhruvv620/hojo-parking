@@ -6,8 +6,10 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 import { fmtDateTime } from "@/lib/time";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
+import { pinResultError, usePin } from "@/components/ui/Pin";
 import { Avatar, EmptyState, SectionTitle } from "@/components/ui/bits";
 import { DevicesSection } from "@/components/DevicesSection";
+import { ManagerPinCard } from "@/components/ManagerPinCard";
 
 type Row = { user_id: string; email: string; approved: boolean; created_at: string; last_sign_in_at: string | null; added_by: string | null };
 
@@ -15,6 +17,7 @@ type Row = { user_id: string; email: string; approved: boolean; created_at: stri
 export default function StaffPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const askPin = usePin();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [me, setMe] = useState<string | null>(null);
@@ -33,8 +36,11 @@ export default function StaffPage() {
 
   async function set(r: Row, on: boolean) {
     if (!on && !(await confirm({ title: `Remove ${r.email}?`, message: "They will no longer be able to see or change anything. You can approve them again later.", confirmText: "Remove access", tone: "danger" }))) return;
-    const { error } = await supabaseBrowser().rpc("staff_set", { p_user: r.user_id, p_on: on });
-    if (error) toast(error.message, "error");
+    const pin = on ? "" : await askPin(`Remove ${r.email}`);
+    if (pin === null) return;
+    const { data, error } = await supabaseBrowser().rpc("staff_set", { p_user: r.user_id, p_on: on, p_pin: pin });
+    const err = pinResultError(data, error);
+    if (err) toast(err, "error");
     else { toast(on ? `${r.email} approved.` : `${r.email} removed.`); load(); }
   }
 
@@ -49,6 +55,8 @@ export default function StaffPage() {
           Only approved staff can see or change anything. To add someone: create their login in Supabase (Authentication → Users → Add user), then approve them here.
         </p>
       </div>
+
+      <ManagerPinCard />
 
       {error && <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{error}</p>}
       {!rows && !error && <div className="skeleton h-48 rounded-2xl" />}

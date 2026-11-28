@@ -12,7 +12,7 @@ import { LOT_CAPACITY } from "@/lib/config";
 import { carLabel, sourceLabel, type ParkingRecord } from "@/lib/types";
 import { lotFits, vehicleLabel } from "@/lib/lots";
 import { DAY, fmtDateTime, fmtDay, fmtDuration, fmtTime, sameDay, startOfDay } from "@/lib/time";
-import { checkOutNow, markArrived, moveToLot } from "@/lib/actions";
+import { checkOutNow, markArrived, moveToLot, undoTo } from "@/lib/actions";
 import { LOTS, lotName, recordLot, type LotId } from "@/lib/lots";
 import { UpdateStayDialog } from "@/components/UpdateStayDialog";
 import { NewDeviceNotice } from "@/components/NewDeviceNotice";
@@ -51,8 +51,8 @@ export default function Dashboard() {
     seen.current = ids;
   }, [p.records, p.loading, toast]);
   // refresh right away after any button, without waiting for the live update
-  const run: typeof runAction = async (action, msg) => {
-    const ok = await runAction(action, msg);
+  const run: typeof runAction = async (action, msg, opts) => {
+    const ok = await runAction(action, msg, opts && { ...opts, after: () => { opts.after?.(); p.reload(); } });
     p.reload();
     return ok;
   };
@@ -64,7 +64,7 @@ export default function Dashboard() {
       confirmText: "Check out",
       icon: "checkout",
     });
-    if (ok) run(checkOutNow(r), `${r.guest_name} checked out. Spot is free.`);
+    if (ok) run(checkOutNow(r), `${r.guest_name} checked out. Spot is free.`, { undo: () => undoTo(r) });
   }
 
   if (p.loading) return <DashboardSkeleton />;
@@ -110,7 +110,7 @@ export default function Dashboard() {
 
         <aside className="space-y-6">
           <UpcomingPanel upcoming={p.upcoming} parked={p.parked} now={p.now}
-            onArrived={(r) => run(markArrived(r, p.isFull), `${r.guest_name} checked in.`)} />
+            onArrived={(r) => run(markArrived(r, p.isFull), `${r.guest_name} checked in.`, { undo: () => undoTo(r) })} />
           <LeavingToday cars={p.leavingToday} now={p.now} />
           <RecentlyLeft cars={p.recentlyLeft} onExtend={(r) => setStay({ r, add: 1 })} />
           <LotSwitches />
@@ -308,7 +308,7 @@ function SpotCard({ r, rect }: { r: ParkingRecord; rect: DOMRect }) {
   const above = rect.top > 110;
   return (
     <Portal>
-      <div role="tooltip" className="pointer-events-none fixed z-[60] animate-pop rounded-xl bg-slate-900 p-3 text-left text-xs shadow-xl"
+      <div role="tooltip" className="pointer-events-none fixed z-[60] fixed-colors animate-pop rounded-xl bg-slate-900 p-3 text-left text-xs shadow-xl"
         style={{ width: W, left, ...(above ? { bottom: window.innerHeight - rect.top + GAP } : { top: rect.bottom + GAP }) }}>
         <span className="block font-semibold text-white">{r.guest_name}</span>
         <span className="block text-slate-300">{carLabel(r)}</span>
@@ -516,8 +516,14 @@ function LotSwitches() {
               title={isFull ? `${l.name} is marked full: guests are told to ask the front desk. Click to open.` : `Click to mark ${l.name} full for guests.`}
               onClick={async () => {
                 const err = await setLotFull(l.id, !isFull);
-                if (err) toast(err, "error");
-                else toast(!isFull ? `${l.name} marked full for guests.` : `${l.name} is open again.`, !isFull ? "warn" : "ok");
+                if (err) return toast(err, "error");
+                toast(!isFull ? `${l.name} marked full for guests.` : `${l.name} is open again.`, !isFull ? "warn" : "ok", {
+                  label: "Undo",
+                  run: async () => {
+                    const e = await setLotFull(l.id, isFull);
+                    toast(e ?? "Undone.", e ? "error" : "ok");
+                  },
+                });
               }}
               className={`flex h-9 items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition active:scale-95 disabled:opacity-50 ${
                 isFull ? "border-red-200 bg-red-50 text-red-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>

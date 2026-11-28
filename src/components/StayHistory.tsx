@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowRight, ArrowRightLeft, Ban, CalendarMinus, CalendarPlus, CalendarRange, CircleCheck, CircleX, Clock,
-  History, LogIn, LogOut, Pencil, RotateCcw, StickyNote, UserPlus,
+  History, LogIn, LogOut, Pencil, RotateCcw, StickyNote, Undo2, UserPlus,
 } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { markChangePaid } from "@/lib/actions";
@@ -28,6 +28,7 @@ const KIND: Record<StayChangeKind, { label: string; icon: React.ReactNode; tone:
   moved: { label: "Moved", icon: <ArrowRightLeft />, tone: "bg-sky-100 text-sky-700" },
   edited: { label: "Details edited", icon: <Pencil />, tone: "bg-slate-100 text-slate-600" },
   note: { label: "Note added", icon: <StickyNote />, tone: "bg-yellow-100 text-yellow-700" },
+  undone: { label: "Undone", icon: <Undo2 />, tone: "bg-slate-200 text-slate-700" },
 };
 
 const range = (a: string | null, c: string | null) =>
@@ -100,7 +101,7 @@ export function StayHistory({ recordId, refreshKey, onUnpaidCount }: {
             const k = KIND[c.kind] ?? KIND.edited;
             const before = range(c.old_arrival_at, c.old_checkout_at);
             const after = range(c.new_arrival_at, c.new_checkout_at);
-            const dateChange = ["extended", "shortened", "dates_changed", "reopened"].includes(c.kind) && before && after && before !== after;
+            const dateChange = ["extended", "shortened", "dates_changed", "reopened", "undone"].includes(c.kind) && before && after && before !== after;
             const diff = c.old_days != null && c.new_days != null ? c.new_days - c.old_days : 0;
             return (
               <li key={c.id} className="relative flex gap-3.5">
@@ -138,7 +139,7 @@ export function StayHistory({ recordId, refreshKey, onUnpaidCount }: {
 
                   {c.details && <div className="mt-1 text-sm text-slate-600">{c.details}</div>}
 
-                  {c.note && (
+                  {c.note && !(c.kind === "undone" && c.note === "Undo") && (
                     <div className="mt-2 rounded-lg border-l-2 border-yellow-400 bg-yellow-50/70 px-3 py-2 text-sm text-slate-700">
                       {c.note}
                     </div>

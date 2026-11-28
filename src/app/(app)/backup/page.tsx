@@ -13,6 +13,7 @@ import { carLabel, sourceLabel, type ParkingRecord } from "@/lib/types";
 import { lotName, recordLot, vehicleLabel } from "@/lib/lots";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ui/Confirm";
+import { pinResultError, usePin } from "@/components/ui/Pin";
 import { SectionTitle } from "@/components/ui/bits";
 
 type Settings = { url: string; key: string; lastFull: string };
@@ -41,6 +42,7 @@ function download(name: string, text: string, type: string) {
 export default function BackupPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const askPin = usePin();
   const [s, setS] = useState<Settings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [url, setUrl] = useState("");
@@ -71,7 +73,10 @@ export default function BackupPage() {
     }
     setBusy("save");
     const full = `${clean}?key=${s.key}`;
-    const { error } = await sb().from("app_settings").update({ value: full, updated_at: new Date().toISOString() }).eq("key", "backup_url");
+    const pin = await askPin(s.url ? "Change the Google Sheet backup" : "Connect the Google Sheet backup");
+    if (pin === null) { setBusy(null); return; }
+    const { data, error: e1 } = await sb().rpc("set_backup_url", { p_url: full, p_pin: pin });
+    const error = pinResultError(data, e1) ? { message: pinResultError(data, e1)! } : null;
     setBusy(null);
     if (error) toast(error.message, "error");
     else { toast("Google Sheet connected. Now press Send test."); setUrl(""); load(); }
@@ -79,7 +84,10 @@ export default function BackupPage() {
 
   async function disconnect() {
     if (!(await confirm({ title: "Stop the Google Sheet backup?", message: "New changes won't be copied to the sheet. What's already in the sheet stays there.", confirmText: "Stop backup", tone: "danger" }))) return;
-    const { error } = await sb().from("app_settings").update({ value: "" }).eq("key", "backup_url");
+    const pin = await askPin("Stop the Google Sheet backup");
+    if (pin === null) return;
+    const { data, error: e1 } = await sb().rpc("set_backup_url", { p_url: "", p_pin: pin });
+    const error = pinResultError(data, e1) ? { message: pinResultError(data, e1)! } : null;
     if (error) toast(error.message, "error"); else { toast("Backup stopped."); load(); }
   }
 
@@ -115,11 +123,11 @@ export default function BackupPage() {
     setBusy("csv");
     try {
       const cars = (await fetchAll("parking_records", "arrival_at")) as unknown as ParkingRecord[];
-      const head = ["Guest", "Phone", "Room", "Confirmation #", "Booked", "Vehicle", "Plate", "State", "Car", "Lot", "Status", "Checked in", "Days", "Leaves by", "Checked out early", "Notes"];
+      const head = ["Guest", "Phone", "Room", "Confirmation #", "Booked", "Vehicle", "Plate", "State", "Car", "Lot", "Status", "Checked in", "Days", "Leaves by", "Checked out early", "Amount paid", "Paid by", "Notes"];
       const rows = cars.map((r) => csvRow([
         r.guest_name, r.phone, r.room_number, r.confirmation_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate,
         r.plate_state, carLabel(r), lotName(recordLot(r)), r.status, fmtDateTime(r.arrival_at), r.days, fmtDateTime(r.checkout_at),
-        r.checked_out_at ? fmtDateTime(r.checked_out_at) : "", r.notes,
+        r.checked_out_at ? fmtDateTime(r.checked_out_at) : "", r.amount_paid ?? "", r.payment_method ?? "", r.notes,
       ]));
       download(`parking-cars-${today}.csv`, [head.join(","), ...rows].join("\n"), "text/csv");
       toast(`Downloaded ${cars.length} cars.`);
@@ -190,7 +198,7 @@ export default function BackupPage() {
               <button className="btn-primary btn-sm" onClick={async () => { await navigator.clipboard.writeText(code); toast("Script copied."); }}><Copy /> Copy script</button>
               <button className="btn-ghost btn-sm" onClick={() => setShowCode((v) => !v)}>{showCode ? "Hide" : "Show"} script</button>
             </div>
-            {showCode && <pre className="mt-2 max-h-72 overflow-auto rounded-xl bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-100">{code}</pre>}
+            {showCode && <pre className="mt-2 max-h-72 overflow-auto fixed-colors rounded-xl bg-slate-900 p-4 text-[11px] leading-relaxed text-slate-100">{code}</pre>}
           </Step>
           <Step n={3} title="Publish it as a web app">
             <p className="text-sm text-slate-600">
@@ -234,7 +242,7 @@ export default function BackupPage() {
 function Step({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
     <li className="flex gap-3">
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">{n}</span>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center fixed-colors rounded-full bg-slate-900 text-xs font-bold text-white">{n}</span>
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="mb-1.5 font-semibold text-slate-900">{title}</div>
         {children}
