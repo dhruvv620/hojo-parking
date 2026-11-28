@@ -34,7 +34,7 @@ export function Modal({ open, onClose, title, subtitle, icon, children, footer, 
   return (
     <Portal>
       <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4">
-        <div className="absolute inset-0 animate-fade bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
+        <div className="fixed-colors absolute inset-0 animate-fade bg-slate-900/40 backdrop-blur-[2px]" onClick={onClose} />
         <div ref={panel} role="dialog" aria-modal="true" aria-label={title}
           className={`relative flex max-h-[92vh] w-full animate-dialog flex-col rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl ${wide ? "sm:max-w-2xl" : "sm:max-w-lg"}`}>
           <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4 sm:px-6">

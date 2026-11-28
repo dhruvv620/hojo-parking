@@ -20,6 +20,7 @@ const CARS = [
   ["checkout_at", "Leaves by"], ["checked_out_at", "Checked out early at"], ["notes", "Notes"],
   ["spot_map", "Map lot"], ["spot_x", "Map X"], ["spot_y", "Map Y"],
   ["created_at", "Created"], ["updated_at", "Last changed"], ["deleted_at", "Deleted at"],
+  ["amount_paid", "Amount paid"], ["payment_method", "Paid by"],
 ];
 const CHANGES = [
   ["id", "Change ID"], ["record_id", "Record ID"], ["changed_at", "When"], ["changed_by_email", "By"],
@@ -66,6 +67,9 @@ function tab(ss, name, cols) {
     sh.getRange(1, 1, 1, cols.length).setValues([cols.map((c) => c[1])]).setFontWeight("bold");
     sh.setFrozenRows(1);
     sh.getRange(1, 1, sh.getMaxRows(), cols.length).setNumberFormat("@"); // keep plates / numbers as typed
+  } else if (sh.getLastColumn() < cols.length) {
+    // a newer script added columns: add their titles to the existing tab
+    sh.getRange(1, 1, 1, cols.length).setValues([cols.map((c) => c[1])]).setFontWeight("bold");
   }
   return sh;
 }

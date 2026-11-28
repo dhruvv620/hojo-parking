@@ -14,7 +14,7 @@ import { VehicleIcon } from "./ui/bits";
 import { useLotsFull } from "@/lib/useLotsFull";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import { LOT_CAPACITY } from "@/lib/config";
-import { isLotFullError, type ParkingRecord, type Source } from "@/lib/types";
+import { PAYMENT_METHODS, isLotFullError, type ParkingRecord, type PaymentMethod, type Source } from "@/lib/types";
 import { addDays, fmtDateTime, fmtTime, fromLocalInput, toLocalInput } from "@/lib/time";
 import { CustomerSuggest, type Customer } from "./CustomerSuggest";
 
@@ -56,6 +56,8 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
     futureArrival: toLocalInput(record?.status === "reserved" ? record.arrival_at : nextMorning()),
     days: record?.days ?? 1,
     notes: record?.notes ?? "",
+    amount_paid: record?.amount_paid != null ? String(record.amount_paid) : "",
+    payment_method: (record?.payment_method ?? null) as PaymentMethod | null,
     spot: (record?.spot_x != null && record?.spot_y != null
       ? { map: normalizeLot(record.spot_map) ?? recordLot(record) ?? "lot1", x: Number(record.spot_x), y: Number(record.spot_y) }
       : null) as Pin | null,
@@ -151,6 +153,13 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
       arrival_at: arrivalIso,
       days,
       notes: f.notes.trim() || null,
+      // only sent when used, so saving still works before the payment fields exist (update 14)
+      ...(f.amount_paid.trim() !== "" || f.payment_method || record?.amount_paid != null || record?.payment_method
+        ? {
+            amount_paid: f.amount_paid.trim() === "" ? null : Math.min(99999, Math.max(0, Number(f.amount_paid) || 0)),
+            payment_method: f.payment_method,
+          }
+        : {}),
       spot_x: isFuture ? null : f.spot?.x ?? null,
       spot_y: isFuture ? null : f.spot?.y ?? null,
       spot_map: isFuture ? null : f.spot?.map ?? null,
@@ -281,6 +290,30 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
           </div>
             </>
           )}
+        </div>
+
+        {/* payment for the stay (shows on the receipt) */}
+        <div className="mt-5 grid gap-4 border-t border-slate-100 pt-5 sm:grid-cols-[180px_1fr]">
+          <div>
+            <label className="label" htmlFor="amount-paid">Amount paid <span className="font-normal text-slate-400">(optional)</span></label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">$</span>
+              <input id="amount-paid" inputMode="decimal" className="input pl-7 tabular-nums" placeholder="0.00" value={f.amount_paid}
+                onChange={(e) => set("amount_paid", e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1").slice(0, 8))} />
+            </div>
+          </div>
+          <div>
+            <span className="label">Paid by</span>
+            <div className="grid grid-cols-4 gap-1.5">
+              {PAYMENT_METHODS.map((m) => (
+                <button key={m.id} type="button" data-active={f.payment_method === m.id} aria-pressed={f.payment_method === m.id}
+                  onClick={() => set("payment_method", f.payment_method === m.id ? null : m.id)}
+                  className="choice h-11 text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700">
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {isFuture && (

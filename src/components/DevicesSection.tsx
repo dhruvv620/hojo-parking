@@ -8,6 +8,7 @@ import { fmtDateTime, fmtDuration } from "@/lib/time";
 import type { Device } from "@/lib/types";
 import { useToast } from "./Toast";
 import { useConfirm } from "./ui/Confirm";
+import { pinResultError, usePin } from "./ui/Pin";
 import { EmptyState, SectionTitle } from "./ui/bits";
 
 const DAY = 86_400_000;
@@ -29,6 +30,7 @@ const ago = (iso: string) => {
 export function DevicesSection() {
   const toast = useToast();
   const confirm = useConfirm();
+  const askPin = usePin();
   const [devices, setDevices] = useState<Device[] | null>(null);
   const [hotelIp, setHotelIp] = useState("");
   const [unavailable, setUnavailable] = useState(false);
@@ -62,13 +64,19 @@ export function DevicesSection() {
       tone: "danger",
     });
     if (!ok) return;
-    const { error } = await supabaseBrowser().rpc("set_device_removed", { p_id: d.id, p_removed: true });
-    if (error) toast(error.message, "error"); else { toast("Device removed."); load(); }
+    const pin = await askPin(`Remove ${d.name ?? d.label ?? "this device"}`);
+    if (pin === null) return;
+    const { data, error } = await supabaseBrowser().rpc("set_device_removed", { p_id: d.id, p_removed: true, p_pin: pin });
+    const err = pinResultError(data, error);
+    if (err) toast(err, "error"); else { toast("Device removed."); load(); }
   }
 
   async function restore(d: Device) {
-    const { error } = await supabaseBrowser().rpc("set_device_removed", { p_id: d.id, p_removed: false });
-    if (error) toast(error.message, "error"); else { toast("Device restored."); load(); }
+    const pin = await askPin(`Restore ${d.name ?? d.label ?? "this device"}`);
+    if (pin === null) return;
+    const { data, error } = await supabaseBrowser().rpc("set_device_removed", { p_id: d.id, p_removed: false, p_pin: pin });
+    const err = pinResultError(data, error);
+    if (err) toast(err, "error"); else { toast("Device restored."); load(); }
   }
 
   async function saveName(d: Device) {
@@ -83,8 +91,11 @@ export function DevicesSection() {
       confirmText: "Yes, this is the hotel network",
     });
     if (!ok) return;
-    const { data, error } = await supabaseBrowser().rpc("set_hotel_network");
-    if (error) toast(error.message, "error"); else { toast(`Hotel network saved (${data}).`); load(); }
+    const pin = await askPin("Change the hotel network");
+    if (pin === null) return;
+    const { data, error } = await supabaseBrowser().rpc("set_hotel_network", { p_pin: pin });
+    const err = pinResultError(data, error);
+    if (err) toast(err, "error"); else { toast(`Hotel network saved (${(data as { ip: string }).ip}).`); load(); }
   }
 
   if (unavailable) {

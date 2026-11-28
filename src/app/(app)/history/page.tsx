@@ -130,12 +130,12 @@ export default function HistoryPage() {
         all.push(...((data as ParkingRecord[]) ?? []));
         if (!data || data.length < 1000) break;
       }
-      const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Vehicle", "Plate", "State", "Make", "Model", "Color", "Lot", "Status", "Arrived", "Days", "Leaves by", "Left", "Notes"];
+      const head = ["Guest", "Confirmation #", "Phone", "Room", "Booked", "Vehicle", "Plate", "State", "Make", "Model", "Color", "Lot", "Status", "Arrived", "Days", "Leaves by", "Left", "Amount paid", "Paid by", "Notes"];
       const now = Date.now();
       const lines = all.map((r) => csvRow([
         r.guest_name, r.confirmation_number, r.phone, r.room_number, sourceLabel(r.source), vehicleLabel(r.vehicle_type), r.license_plate, r.plate_state,
         r.make, r.model, r.color, lotName(recordLot(r)), liveStatus(r, now), fmtDateTime(r.arrival_at), r.days,
-        fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.notes,
+        fmtDateTime(r.checkout_at), fmtDateTime(leftAt(r)), r.amount_paid ?? "", r.payment_method ?? "", r.notes,
       ]));
       const blob = new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" });
       const a = document.createElement("a");

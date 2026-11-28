@@ -31,7 +31,7 @@ export default function LoginPage() {
   return (
     <main className="grid min-h-screen lg:grid-cols-2">
       {/* brand panel */}
-      <div className="relative hidden overflow-hidden bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-12 text-white lg:flex lg:flex-col">
+      <div className="relative hidden overflow-hidden fixed-colors bg-gradient-to-br from-brand-600 via-brand-700 to-brand-900 p-12 text-white lg:flex lg:flex-col">
         <div className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-white/10 blur-3xl" />
         <div className="absolute -bottom-32 -left-20 h-96 w-96 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="relative flex items-center gap-4">
@@ -56,7 +56,7 @@ export default function LoginPage() {
         <div className="w-full max-w-sm animate-rise">
           <div className="mb-8 lg:hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-96.png" alt={HOTEL_NAME} width={140} height={55} className="h-14 w-auto" />
+            <img src="/logo-96.png" alt={HOTEL_NAME} width={140} height={55} className="logo-pill h-14 w-auto" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Welcome back</h1>
           <p className="mt-1.5 text-slate-500">Sign in to manage {HOTEL_NAME} parking.</p>

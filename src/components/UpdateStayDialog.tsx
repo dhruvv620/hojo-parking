@@ -5,7 +5,7 @@ import { ArrowRight, Ban, CalendarCheck, CalendarRange, ChevronDown, CircleCheck
 import { DatePicker } from "./ui/DatePicker";
 import { Modal } from "./ui/Modal";
 import { useRun } from "./Toast";
-import { updateStay } from "@/lib/actions";
+import { updateStay, undoTo } from "@/lib/actions";
 import type { ParkingRecord, Payment } from "@/lib/types";
 import { DAY, fmtDateTime, fmtTime } from "@/lib/time";
 
@@ -69,7 +69,11 @@ export function UpdateStayDialog({ record, presetAdd = 0, onClose, onSaved }: {
     setBusy(true);
     const amt = amount.trim() ? Number(amount.replace(/[^0-9.]/g, "")) : null;
     const msg = diff > 0 ? `Extended by ${diff} day${diff > 1 ? "s" : ""}.` : diff < 0 ? `Shortened by ${-diff} day${diff < -1 ? "s" : ""}.` : "Note added.";
-    const ok = await run(updateStay(record, { days, payment, amount: Number.isFinite(amt) ? amt : null, note }), msg);
+    const before = record;
+    const ok = await run(updateStay(record, { days, payment, amount: Number.isFinite(amt) ? amt : null, note }), msg, {
+      undo: () => undoTo(before, { voidPayment: !!payment }),
+      after: onSaved,
+    });
     setBusy(false);
     if (ok) {
       onSaved?.();

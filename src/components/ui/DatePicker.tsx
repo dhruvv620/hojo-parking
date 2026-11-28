@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Portal, useDismiss, useFloatingPosition } from "./Dropdown";
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const WEEKDAYS = { en: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"], es: ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"] };
 const MINUTES = [0, 15, 30, 45];
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -24,9 +24,11 @@ type Props = {
   ariaLabel?: string;
   /** Extra line at the bottom of the calendar, e.g. "3 days". */
   footer?: (d: Date) => React.ReactNode;
+  /** Language for month and day names (the guest form can be in Spanish). */
+  lang?: "en" | "es";
 };
 
-export function DatePicker({ value, onChange, mode = "datetime", minDate, renderTrigger, triggerClassName, ariaLabel, footer }: Props) {
+export function DatePicker({ value, onChange, mode = "datetime", minDate, renderTrigger, triggerClassName, ariaLabel, footer, lang = "en" }: Props) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState(() => new Date(value.getFullYear(), value.getMonth(), 1));
   const [focusDay, setFocusDay] = useState(value);
@@ -44,7 +46,7 @@ export function DatePicker({ value, onChange, mode = "datetime", minDate, render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const label = value.toLocaleString("en-US", mode === "datetime"
+  const label = value.toLocaleString(lang === "es" ? "es-US" : "en-US", mode === "datetime"
     ? { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }
     : { weekday: "short", month: "short", day: "numeric" });
 
@@ -116,7 +118,7 @@ export function DatePicker({ value, onChange, mode = "datetime", minDate, render
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <div className="text-sm font-bold text-slate-900">
-                {view.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+                {view.toLocaleDateString(lang === "es" ? "es-US" : "en-US", { month: "long", year: "numeric" })}
               </div>
               <button type="button" aria-label="Next month" onClick={() => setView(new Date(view.getFullYear(), view.getMonth() + 1, 1))}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 active:scale-90">
@@ -126,7 +128,7 @@ export function DatePicker({ value, onChange, mode = "datetime", minDate, render
 
             {/* day grid */}
             <div className="grid grid-cols-7 gap-0.5 text-center" role="grid" onKeyDown={onGridKey}>
-              {WEEKDAYS.map((w) => (
+              {WEEKDAYS[lang].map((w) => (
                 <div key={w} className="pb-1 text-[11px] font-semibold uppercase text-slate-400">{w}</div>
               ))}
               {days.map((d) => {
@@ -198,7 +200,7 @@ export function DatePicker({ value, onChange, mode = "datetime", minDate, render
                 </button>
               )}
               <button type="button" className="btn-primary btn-sm ml-auto" onClick={() => { setOpen(false); btnRef.current?.focus(); }}>
-                Done
+                {lang === "es" ? "Listo" : "Done"}
               </button>
             </div>
           </div>

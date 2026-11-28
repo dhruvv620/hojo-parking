@@ -12,6 +12,7 @@ import { LOTS, VEHICLES, lotById, lotFits, suggestLot, type LotId, type VehicleT
 import { DatePicker } from "@/components/ui/DatePicker";
 import { VehicleIcon } from "@/components/ui/bits";
 import { DirectionsButtons } from "@/components/DirectionsButtons";
+import { LANG_KEY, WORDS, startingLang, translateError, type Lang, type Words } from "./i18n";
 
 type Done = { ref: string; lot: LotId | null; fullLot: LotId | null; checkout_at: string; name: string; plate: string; matched: boolean; already: boolean };
 
@@ -36,6 +37,16 @@ export function CheckinForm() {
   const [error, setError] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
   const [done, setDone] = useState<Done | null>(null);
+  const [lang, setLangState] = useState<Lang>("en");
+  const t = WORDS[lang];
+
+  useEffect(() => { setLangState(startingLang()); }, []);
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+  const setLang = (l: Lang) => {
+    setLangState(l);
+    try { localStorage.setItem(LANG_KEY, l); } catch { /* private window */ }
+  };
+  const shell = { lang, onLang: setLang, t };
 
   useEffect(() => {
     if (!token) { setStatus("invalid"); return; }
@@ -99,12 +110,12 @@ export function CheckinForm() {
     }
     setBusy(false);
     if (error) {
-      setError(niceError(error.message));
+      setError(translateError(niceError(error.message), lang));
       return;
     }
     const d = data as { ok: boolean; error?: string; ref: string; lot: LotId | null; full_lot?: LotId | null; checkout_at: string; matched_reservation: boolean; already?: boolean };
     if (!d?.ok) {
-      setError(d?.error ?? "Something went wrong. Please ask the front desk.");
+      setError(d?.error ? translateError(d.error, lang) : t.wrong);
       return;
     }
     setDone({ ref: d.ref, lot: d.lot, fullLot: d.full_lot ?? null, checkout_at: d.checkout_at, name: f.name.trim(), plate: f.plate.trim().toUpperCase(), matched: d.matched_reservation, already: !!d.already });
@@ -114,16 +125,16 @@ export function CheckinForm() {
   /* ---------------- screens ---------------- */
 
   if (status === "loading") {
-    return <Shell><div className="flex justify-center py-24"><LoaderCircle className="h-6 w-6 animate-spin text-slate-400" /></div></Shell>;
+    return <Shell {...shell}><div className="flex justify-center py-24"><LoaderCircle className="h-6 w-6 animate-spin text-slate-400" /></div></Shell>;
   }
 
   if (status === "invalid") {
     return (
-      <Shell>
+      <Shell {...shell}>
         <div className="card mt-6 p-8 text-center">
           <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600"><CircleAlert className="h-6 w-6" /></span>
-          <h1 className="mt-4 text-xl font-bold">This link isn&apos;t working</h1>
-          <p className="mt-2 text-slate-600">Please scan the QR code at the front desk again, or ask the front desk to check you in.</p>
+          <h1 className="mt-4 text-xl font-bold">{t.linkBroken}</h1>
+          <p className="mt-2 text-slate-600">{t.linkBrokenText}</p>
         </div>
       </Shell>
     );
@@ -133,83 +144,83 @@ export function CheckinForm() {
     const l = lotById(done.lot);
     const fl = lotById(done.fullLot);
     return (
-      <Shell>
+      <Shell {...shell}>
         <div className="card mt-6 animate-rise overflow-hidden">
           <div className="bg-gradient-to-b from-emerald-50 to-white px-6 pb-4 pt-8 text-center">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30">
               <CircleCheck className="h-8 w-8" />
             </span>
-            <h1 className="mt-4 text-2xl font-bold tracking-tight">You&apos;re all set, {done.name.split(" ")[0]}!</h1>
-            <p className="mt-1 text-slate-600">Your car <b className="font-mono">{done.plate}</b> is registered.</p>
+            <h1 className="mt-4 text-2xl font-bold tracking-tight">{t.allSet(done.name.split(" ")[0])}</h1>
+            <p className="mt-1 text-slate-600">{(() => { const [a, b, c] = t.registered(done.plate); return <>{a}<b className="font-mono">{b}</b>{c}</>; })()}</p>
           </div>
           <div className="space-y-4 px-6 pb-6">
             {l ? (
             <div className="rounded-2xl border-2 border-brand-200 bg-brand-50 p-4">
-              <div className="text-xs font-bold uppercase tracking-wider text-brand-700">Please park in</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-brand-700">{t.parkIn}</div>
               <div className="mt-1 flex items-center gap-2">
                 <span className={`h-3 w-3 rounded-full ${l.dot}`} />
-                <span className="text-2xl font-extrabold text-slate-900">{l.name}</span>
+                <span className="text-2xl font-extrabold text-slate-900">{t.lotName[l.id]}</span>
               </div>
-              <div className="text-sm text-slate-600">{l.place} · {l.rule}</div>
+              <div className="text-sm text-slate-600">{t.lotPlace[l.id]} · {t.lotRule[l.id]}</div>
               {l.src && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={l.src} alt={`${l.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ aspectRatio: `${l.w} / ${l.h}`, maxHeight: 260 }} />
+                <img src={l.src} alt={t.fromAbove(t.lotName[l.id])} className="mt-3 w-full rounded-xl object-cover" style={{ aspectRatio: `${l.w} / ${l.h}`, maxHeight: 260 }} />
               )}
-              <div className="mt-3"><DirectionsButtons lot={l.id} size="lg" /></div>
+              <div className="mt-3"><DirectionsButtons lot={l.id} size="lg" words={t} /></div>
             </div>
             ) : (
-              <AskDesk lotName={fl?.name} big />
+              <AskDesk t={t} lotName={fl ? t.lotName[fl.id] : undefined} big />
             )}
             <dl className="grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl bg-slate-50 p-3">
-                <dt className="text-xs text-slate-500">Checkout</dt>
-                <dd className="font-semibold">{new Date(done.checkout_at).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</dd>
+                <dt className="text-xs text-slate-500">{t.checkout}</dt>
+                <dd className="font-semibold">{new Date(done.checkout_at).toLocaleDateString(t.locale, { weekday: "short", month: "short", day: "numeric" })}</dd>
               </div>
               <div className="rounded-xl bg-slate-50 p-3">
-                <dt className="text-xs text-slate-500">Reference</dt>
+                <dt className="text-xs text-slate-500">{t.reference}</dt>
                 <dd className="font-mono text-lg font-bold tracking-wider">#{done.ref}</dd>
               </div>
             </dl>
-            {done.matched && <p className="text-sm text-emerald-700">We found your online booking and linked it.</p>}
-            {done.already && <p className="text-sm text-emerald-700">This car was already checked in, so nothing new was added.</p>}
-            <p className="text-center text-sm text-slate-500">Show this screen to the front desk if they ask.</p>
+            {done.matched && <p className="text-sm text-emerald-700">{t.matched}</p>}
+            {done.already && <p className="text-sm text-emerald-700">{t.already}</p>}
+            <p className="text-center text-sm text-slate-500">{t.showDesk}</p>
           </div>
         </div>
         <button type="button" className="btn-ghost mx-auto mt-4 flex" onClick={() => { setDone(null); setVehicle(null); setTried(false); setF({ name: "", phone: "", plate: "", state: "AZ", make: "", model: "", color: "", confirmation: "", website: "" }); }}>
-          Register another car
+          {t.another}
         </button>
       </Shell>
     );
   }
 
   return (
-    <Shell>
+    <Shell {...shell}>
       <form onSubmit={submit} noValidate className="mt-5 space-y-4 pb-28">
         {/* 1. vehicle type */}
-        <Card n={1} title="What are you parking?" missing={tried && missing.vehicle}>
+        <Card n={1} title={t.whatParking} missing={tried && missing.vehicle}>
           <div className="grid grid-cols-3 gap-2">
             {VEHICLES.map((v) => (
               <button key={v.id} type="button" onClick={() => setVehicle(v.id)} data-active={vehicle === v.id} aria-pressed={vehicle === v.id}
                 className="choice flex flex-col items-center gap-1.5 py-4 text-sm font-bold text-slate-700 data-[active=true]:text-brand-700">
                 <VehicleIcon type={v.id} className="h-7 w-7" />
-                {v.label}
+                {t.vehicle[v.id]}
               </button>
             ))}
           </div>
-          {tried && missing.vehicle && <Hint>Please choose one.</Hint>}
+          {tried && missing.vehicle && <Hint>{t.chooseOne}</Hint>}
         </Card>
 
         {/* where to park */}
         <section className="card overflow-hidden">
           {askDesk ? (
-            <div className="animate-rise border-b border-slate-100 p-4"><AskDesk lotName={usual?.name} /></div>
+            <div className="animate-rise border-b border-slate-100 p-4"><AskDesk t={t} lotName={usual ? t.lotName[usual.id] : undefined} /></div>
           ) : lot ? (
             <div className="animate-rise border-b border-slate-100 bg-gradient-to-b from-brand-50/80 to-white p-4">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-brand-700">
-                <MapPin className="h-3.5 w-3.5" /> {options.length > 1 ? "Choose where to park" : "Park here"}
+                <MapPin className="h-3.5 w-3.5" /> {options.length > 1 ? t.chooseWhere : t.parkHere}
               </div>
               {options.length > 1 ? (
-                <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Choose a lot">
+                <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-label={t.chooseLot}>
                   {options.map((id) => {
                     const o = lotById(id)!;
                     const active = id === lot.id;
@@ -224,10 +235,10 @@ export function CheckinForm() {
                         <span className="block p-2.5">
                           <span className="flex items-center gap-1.5">
                             <span className={`h-2.5 w-2.5 rounded-full ${o.dot}`} />
-                            <span className="font-extrabold">{o.name}</span>
+                            <span className="font-extrabold">{t.lotName[o.id]}</span>
                           </span>
                           <span className="block text-xs text-slate-500">
-                            {o.rule}
+                            {t.lotRule[o.id]}
                           </span>
                         </span>
                         {active && (
@@ -243,30 +254,30 @@ export function CheckinForm() {
                 <>
                   <div className="mt-1 flex items-center gap-2">
                     <span className={`h-3 w-3 rounded-full ${lot.dot}`} />
-                    <span className="text-xl font-extrabold">{lot.name}</span>
-                    <span className="text-sm text-slate-500">· {lot.rule}</span>
+                    <span className="text-xl font-extrabold">{t.lotName[lot.id]}</span>
+                    <span className="text-sm text-slate-500">· {t.lotRule[lot.id]}</span>
                   </div>
                   {lot.src && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={lot.src} alt={`${lot.name} from above`} className="mt-3 w-full rounded-xl object-cover" style={{ maxHeight: 220 }} />
+                    <img src={lot.src} alt={t.fromAbove(t.lotName[lot.id])} className="mt-3 w-full rounded-xl object-cover" style={{ maxHeight: 220 }} />
                   )}
                 </>
               )}
-              <div className="mt-3 text-sm text-slate-600"><b className="text-slate-800">{lot.name}</b> · {lot.place}</div>
-              <div className="mt-3"><DirectionsButtons lot={lot.id} /></div>
+              <div className="mt-3 text-sm text-slate-600"><b className="text-slate-800">{t.lotName[lot.id]}</b> · {t.lotPlace[lot.id]}</div>
+              <div className="mt-3"><DirectionsButtons lot={lot.id} words={t} /></div>
             </div>
           ) : null}
           <div className="p-4">
             <div className="mb-2 flex items-center gap-1.5 text-sm font-bold text-slate-800">
-              <SquareParking className="h-4 w-4 text-slate-400" /> Parking rules
+              <SquareParking className="h-4 w-4 text-slate-400" /> {t.rules}
             </div>
             <ul className="space-y-1.5">
               {LOTS.filter((l) => l.id !== "hotel").map((l) => (
                 <li key={l.id} className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition ${!askDesk && lot?.id === l.id ? "bg-brand-50 ring-1 ring-brand-200" : ""}`}>
                   <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${l.dot}`} />
-                  <b className="w-12 shrink-0">{l.name}</b>
-                  <span className="flex-1 text-slate-600">{l.rule}</span>
-                  {lotsFull.includes(l.id) && <span className="chip bg-red-100 text-red-700">Full</span>}
+                  <b className="w-14 shrink-0">{t.lotName[l.id]}</b>
+                  <span className="flex-1 text-slate-600">{t.lotRule[l.id]}</span>
+                  {lotsFull.includes(l.id) && <span className="chip bg-red-100 text-red-700">{t.full}</span>}
                   {!askDesk && lot?.id === l.id && <ArrowRight className="h-4 w-4 text-brand-600" />}
                 </li>
               ))}
@@ -275,48 +286,48 @@ export function CheckinForm() {
         </section>
 
         {/* 2. guest */}
-        <Card n={2} title="Your details" missing={tried && missing.name}>
-          <Input label="Full name" required icon={<UserRound />} value={f.name} onChange={(v) => set("name", v)} autoComplete="name"
-            error={tried && missing.name ? "Please enter your name." : undefined} />
-          <Input label="Phone" icon={<Phone />} value={f.phone} onChange={(v) => set("phone", v)} type="tel" autoComplete="tel" placeholder="Optional" />
+        <Card n={2} title={t.yourDetails} missing={tried && missing.name}>
+          <Input id="full-name" label={t.fullName} required icon={<UserRound />} value={f.name} onChange={(v) => set("name", v)} autoComplete="name"
+            error={tried && missing.name ? t.enterName : undefined} />
+          <Input id="phone" label={t.phone} icon={<Phone />} value={f.phone} onChange={(v) => set("phone", v)} type="tel" autoComplete="tel" placeholder={t.optional} />
         </Card>
 
         {/* 3. car */}
-        <Card n={3} title="Your car" missing={tried && (missing.plate || missing.make || missing.model)}>
+        <Card n={3} title={t.yourCar} missing={tried && (missing.plate || missing.make || missing.model)}>
           <div className="grid grid-cols-[1fr_88px] gap-2">
-            <Input label="License plate" required icon={<RectangleHorizontal />} value={f.plate} mono
+            <Input id="license-plate" label={t.plate} required icon={<RectangleHorizontal />} value={f.plate} mono
               onChange={(v) => set("plate", v.toUpperCase().replace(/[^A-Z0-9 -]/g, "").slice(0, 12))} autoComplete="off" placeholder="ABC 1234"
-              error={tried && missing.plate ? "Please enter your plate." : undefined} />
-            <Input label="State" value={f.state} onChange={(v) => set("state", v.toUpperCase().slice(0, 3))} autoComplete="off" />
+              error={tried && missing.plate ? t.enterPlate : undefined} />
+            <Input id="state" label={t.state} value={f.state} onChange={(v) => set("state", v.toUpperCase().slice(0, 3))} autoComplete="off" />
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Input label="Make" required value={f.make} onChange={(v) => set("make", v)} placeholder="Toyota"
-              error={tried && missing.make ? "Required" : undefined} />
-            <Input label="Model" required value={f.model} onChange={(v) => set("model", v)} placeholder="Camry"
-              error={tried && missing.model ? "Required" : undefined} />
+            <Input id="make" label={t.make} required value={f.make} onChange={(v) => set("make", v)} placeholder="Toyota"
+              error={tried && missing.make ? t.required : undefined} />
+            <Input id="model" label={t.model} required value={f.model} onChange={(v) => set("model", v)} placeholder="Camry"
+              error={tried && missing.model ? t.required : undefined} />
           </div>
-          <Input label="Color" value={f.color} onChange={(v) => set("color", v)} placeholder="Optional" />
+          <Input id="color" label={t.color} value={f.color} onChange={(v) => set("color", v)} placeholder={t.optional} />
         </Card>
 
         {/* 4. stay */}
-        <Card n={4} title="Your stay">
+        <Card n={4} title={t.yourStay}>
           <div>
-            <span className="label">Check-out date <span className="text-red-500">*</span></span>
-            <DatePicker mode="date" ariaLabel="Check-out date" value={checkout}
+            <span className="label">{t.checkoutDate} <span className="text-red-500">*</span></span>
+            <DatePicker mode="date" ariaLabel={t.checkoutDate} value={checkout} lang={lang}
               minDate={(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d; })()}
               onChange={setCheckout}
-              footer={(d) => { const n = daysFromToday(d); return <><b className="text-slate-800">{n} day{n === 1 ? "" : "s"}</b> of parking</>; }}
+              footer={(d) => { const n = daysFromToday(d); return <><b className="text-slate-800">{t.days(n)}</b> {t.ofParking}</>; }}
               triggerClassName="input flex items-center gap-2 text-left"
               renderTrigger={() => (
                 <>
                   <CalendarCheck className="h-4 w-4 shrink-0 text-slate-400" />
-                  <span className="flex-1 font-semibold">{checkout.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
-                  <span className="text-xs font-semibold text-slate-500">{days} day{days === 1 ? "" : "s"}</span>
+                  <span className="flex-1 font-semibold">{checkout.toLocaleDateString(t.locale, { weekday: "long", month: "short", day: "numeric" })}</span>
+                  <span className="text-xs font-semibold text-slate-500">{t.days(days)}</span>
                 </>
               )} />
           </div>
-          <Input label="Booked online? Confirmation #" icon={<Hash />} value={f.confirmation} mono
-            onChange={(v) => set("confirmation", v)} autoComplete="off" placeholder="Optional" />
+          <Input id="booked-online-confirmation-" label={t.confirmation} icon={<Hash />} value={f.confirmation} mono
+            onChange={(v) => set("confirmation", v)} autoComplete="off" placeholder={t.optional} />
           {/* spam trap: hidden from people */}
           <input type="text" name="website" tabIndex={-1} autoComplete="off" value={f.website} onChange={(e) => set("website", e.target.value)}
             className="absolute -left-[9999px] h-0 w-0 opacity-0" aria-hidden />
@@ -332,7 +343,7 @@ export function CheckinForm() {
           <div className="mx-auto max-w-lg">
             <button type="submit" disabled={busy} className="btn-primary btn-lg w-full">
               {busy ? <LoaderCircle className="animate-spin" /> : <CircleCheck />}
-              {busy ? "Submitting..." : "Submit check-in"}
+              {busy ? t.submitting : t.submit}
             </button>
           </div>
         </div>
@@ -343,14 +354,23 @@ export function CheckinForm() {
 
 /* ---------------- pieces ---------------- */
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, lang, onLang, t }: { children: React.ReactNode; lang: Lang; onLang: (l: Lang) => void; t: Words }) {
   return (
     <main className="mx-auto min-h-screen max-w-lg px-4 pb-8 pt-6">
       <header className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-96.png" alt={HOTEL_NAME} width={112} height={44} className="h-11 w-auto" />
+        <img src="/logo-96.png" alt={HOTEL_NAME} width={112} height={44} className="logo-pill h-11 w-auto" />
         <div className="border-l border-slate-200 pl-3 text-sm font-semibold leading-tight text-slate-500">
-          Parking<br />check-in
+          {t.checkIn.split("\n").map((line, i) => <span key={i} className="block">{line}</span>)}
+        </div>
+        <div role="radiogroup" aria-label="Language / Idioma" className="ml-auto flex rounded-lg bg-slate-100 p-0.5">
+          {(["en", "es"] as const).map((l) => (
+            <button key={l} type="button" role="radio" aria-checked={lang === l} onClick={() => onLang(l)}
+              title={l === "en" ? "English" : "Español"}
+              className={`h-8 rounded-md px-3 text-xs font-bold transition ${lang === l ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+              {l.toUpperCase()}
+            </button>
+          ))}
         </div>
       </header>
       {children}
@@ -362,7 +382,7 @@ function Card({ n, title, children, missing }: { n: number; title: string; child
   return (
     <section data-missing={missing || undefined} className={`card space-y-3 p-4 transition ${missing ? "ring-2 ring-red-200" : ""}`}>
       <h2 className="flex items-center gap-2 font-bold text-slate-900">
-        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-xs font-bold text-white">{n}</span>
+        <span className="flex h-6 w-6 items-center justify-center fixed-colors rounded-full bg-slate-900 text-xs font-bold text-white">{n}</span>
         {title}
       </h2>
       {children}
@@ -374,11 +394,11 @@ function Hint({ children }: { children: React.ReactNode }) {
   return <p className="text-sm font-medium text-red-600">{children}</p>;
 }
 
-function Input({ label, value, onChange, required, icon, type = "text", placeholder, autoComplete, mono, error }: {
-  label: string; value: string; onChange: (v: string) => void; required?: boolean; icon?: React.ReactNode;
+function Input({ id: idPart, label, value, onChange, required, icon, type = "text", placeholder, autoComplete, mono, error }: {
+  id: string; label: string; value: string; onChange: (v: string) => void; required?: boolean; icon?: React.ReactNode;
   type?: string; placeholder?: string; autoComplete?: string; mono?: boolean; error?: string;
 }) {
-  const id = `f-${label.replace(/\W+/g, "-").toLowerCase()}`;
+  const id = `f-${idPart}`;
   return (
     <div>
       <label htmlFor={id} className="label">{label} {required && <span className="text-red-500">*</span>}</label>
@@ -394,14 +414,14 @@ function Input({ label, value, onChange, required, icon, type = "text", placehol
 }
 
 /** "Lot X is full. Please check with the front desk where to park." */
-function AskDesk({ lotName, big }: { lotName?: string; big?: boolean }) {
+function AskDesk({ t, lotName, big }: { t: Words; lotName?: string; big?: boolean }) {
   return (
     <div className={`rounded-2xl border-2 border-amber-300 bg-amber-50 ${big ? "p-5" : "p-4"}`}>
       <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800">
-        <TriangleAlert className="h-3.5 w-3.5" /> {lotName ? `${lotName} is full` : "Parking is full"}
+        <TriangleAlert className="h-3.5 w-3.5" /> {lotName ? t.isFull(lotName) : t.parkingFull}
       </div>
-      <p className={`mt-1 font-bold text-slate-900 ${big ? "text-xl" : "text-lg"}`}>Please check with the front desk where to park.</p>
-      <p className="mt-1 text-sm text-slate-600">Please don&apos;t park yet. The front desk will tell you which lot to use.</p>
+      <p className={`mt-1 font-bold text-slate-900 ${big ? "text-xl" : "text-lg"}`}>{t.askDesk}</p>
+      <p className="mt-1 text-sm text-slate-600">{t.dontPark}</p>
     </div>
   );
 }
