@@ -4,7 +4,7 @@ import { useId, useRef, useState } from "react";
 import {
   ArrowRightLeft, BedDouble, CalendarRange, ChevronDown, CalendarCheck, CalendarClock, CalendarDays, Check, CircleAlert, Clock, DoorOpen, Globe,
   Hash, Info, LoaderCircle, LogIn, MapPin, Minus, Phone, Plus, RectangleHorizontal, Sparkles, SquareParking,
-  TriangleAlert, UserRound, X,
+  TriangleAlert, UserRound, X, Banknote, CreditCard, Ellipsis,
 } from "lucide-react";
 import { SectionTitle } from "./ui/bits";
 import { DatePicker } from "./ui/DatePicker";
@@ -17,6 +17,10 @@ import { LOT_CAPACITY } from "@/lib/config";
 import { PAYMENT_METHODS, isLotFullError, type ParkingRecord, type PaymentMethod, type Source } from "@/lib/types";
 import { addDays, fmtDateTime, fmtTime, fromLocalInput, toLocalInput } from "@/lib/time";
 import { CustomerSuggest, type Customer } from "./CustomerSuggest";
+
+const PAY_ICON: Record<PaymentMethod, React.ReactNode> = {
+  cash: <Banknote />, card: <CreditCard />, online: <Globe />, other: <Ellipsis />,
+};
 
 type Props = {
   /** The record being edited. Leave out to add a new car. */
@@ -308,8 +312,8 @@ export function CarForm({ record, insideCount, onSaved, onUpdateStay, otherPins 
               {PAYMENT_METHODS.map((m) => (
                 <button key={m.id} type="button" data-active={f.payment_method === m.id} aria-pressed={f.payment_method === m.id}
                   onClick={() => set("payment_method", f.payment_method === m.id ? null : m.id)}
-                  className="choice h-11 text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700">
-                  {m.label}
+                  className="choice flex h-11 items-center justify-center gap-1.5 px-2 text-sm font-semibold text-slate-600 data-[active=true]:text-brand-700 [&>svg]:h-4 [&>svg]:w-4 [&>svg]:shrink-0">
+                  {PAY_ICON[m.id]} {m.label}
                 </button>
               ))}
             </div>
